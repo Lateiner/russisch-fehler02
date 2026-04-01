@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Russisch-Trainer: Multiple Choice</title>
+    <style>
+        :root {
+            --bg-color: #f4f7f6;
+            --card-bg: #ffffff;
+            --primary-blue: #0984e3;
+            --correct-green: #27ae60;
+            --wrong-red: #d63031;
+            --text-main: #2d3436;
+            --text-secondary: #636e72;
+            --border-color: #dfe6e9;
+        }
+
+        body {
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 15px;
+        }
+
+        .quiz-card {
+            background: var(--card-bg);
+            width: 100%;
+            max-width: 600px;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+            padding: 30px;
+            box-sizing: border-box;
+            text-align: center;
+        }
+
+        .progress-container {
+            width: 100%;
+            height: 6px;
+            background: var(--border-color);
+            border-radius: 3px;
+            margin-bottom: 20px;
+        }
+
+        #progress-bar {
+            height: 100%;
+            background: var(--primary-blue);
+            width: 0%;
+            transition: width 0.4s ease;
+        }
+
+        .question-header {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .question-text {
+            font-size: 1.3rem;
+            font-weight: 600;
+            margin-bottom: 25px;
+            line-height: 1.4;
+        }
+
+        .options-container {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .option-btn {
+            background: var(--card-bg);
+            border: 2px solid var(--border-color);
+            border-radius: 12px;
+            padding: 16px;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-align: left;
+            display: flex;
+            align-items: center;
+            font-weight: 500;
+        }
+
+        .option-btn:hover:not(:disabled) {
+            border-color: var(--primary-blue);
+            background-color: #f0f7ff;
+        }
+
+        .option-btn.correct {
+            background-color: #e8f8f0;
+            border-color: var(--correct-green);
+            color: #1e8449;
+        }
+
+        .option-btn.wrong {
+            background-color: #fdf2f2;
+            border-color: var(--wrong-red);
+            color: #a93226;
+        }
+
+        .option-btn:disabled {
+            cursor: default;
+        }
+
+        #feedback-box {
+            margin-top: 25px;
+            padding: 20px;
+            border-radius: 12px;
+            display: none;
+            text-align: left;
+            animation: slideUp 0.4s ease;
+        }
+
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .explanation-text {
+            font-size: 0.95rem;
+            line-height: 1.5;
+            margin-bottom: 15px;
+        }
+
+        .next-btn, .restart-btn {
+            background: var(--primary-blue);
+            color: white;
+            border: none;
+            padding: 14px 28px;
+            border-radius: 10px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+            transition: background 0.2s;
+        }
+
+        .next-btn:hover { background: #0773c5; }
+
+        #result-screen { display: none; }
+
+        /* Responsive Design */
+        @media (max-width: 480px) {
+            .quiz-card { padding: 20px; }
+            .question-text { font-size: 1.15rem; }
+            .option-btn { font-size: 1rem; padding: 14px; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="quiz-card" id="quiz-container">
+    <div class="progress-container"><div id="progress-bar"></div></div>
+    <div class="question-header" id="question-number">Frage 1 von 10</div>
+    <div class="question-text" id="question-text">Lädt...</div>
+
+    <div class="options-container" id="options-list">
+        <!-- Optionen werden hier generiert -->
+    </div>
+
+    <div id="feedback-box">
+        <div class="explanation-text" id="explanation-content"></div>
+        <button class="next-btn" onclick="goToNext()">Nächste Frage</button>
+    </div>
+</div>
+
+<div class="quiz-card" id="result-screen">
+    <h2 style="margin-top: 0;">Training beendet!</h2>
+    <p id="score-text" style="font-size: 1.2rem; margin-bottom: 25px;"></p>
+    <button class="restart-btn" onclick="restartQuiz()">Training neu starten</button>
+</div>
+
+<script>
+    const questions = [
+        {
+            q: "Wie begrüßt man jemanden höflich am Abend?",
+            options: [
+                "Здравствуйте! Добрый вечер!",
+                "Здравствуйте!",
+                "Очень спасибо."
+            ],
+            correct: 1, // Index 1: Здравствуйте!
+            explanation: "Ira erklärt: Wir wählen entweder Здравствуйте oder Добрый вечер. Die Kombination beider Formeln hintereinander ist im Russischen unüblich."
+        },
+        {
+            q: "Welche Form von „Danke sehr“ ist korrekt?",
+            options: [
+                "Очень спасибо.",
+                "Большой спасибо.",
+                "Большое спасибо."
+            ],
+            correct: 2,
+            explanation: "Das Wort спасибо verlangt das Adjektiv im Neutrum. Daher ist nur большое спасибо richtig."
+        },
+        {
+            q: "Wie bedankst du dich korrekt für ein Video?",
+            options: [
+                "Спасибо для видео.",
+                "Спасибо за видео.",
+                "Спасибо видео."
+            ],
+            correct: 1,
+            explanation: "Nach dem Wort спасибо verwenden wir die Präposition за gefolgt vom Akkusativ."
+        },
+        {
+            q: "Wie sagt man richtig: „Ich weiß nichts“?",
+            options: [
+                "Я ничего знаю.",
+                "Я не ничего знаю.",
+                "Я ничего не знаю."
+            ],
+            correct: 2,
+            explanation: "Im Russischen ist die doppelte Verneinung Pflicht. Wenn du ничего benutzt, muss auch ein не vor dem Verb stehen."
+        },
+        {
+            q: "Was sagst du über eine Freundin aus China?",
+            options: [
+                "Моя китайская подруга.",
+                "Моя подруга-китаянка.",
+                "Моя китайская люди."
+            ],
+            correct: 1,
+            explanation: "Muttersprachler verwenden bevorzugt das Substantiv für die Nationalität (китаянка) oder die Herkunft (из Китая)."
+        },
+        {
+            q: "„An diesem Wochenende“ (neutraler Stil):",
+            options: [
+                "В этих выходных.",
+                "В эти выходные.",
+                "На эти выходные."
+            ],
+            correct: 1,
+            explanation: "Die neutrale Form lautet в эти выходные. Die Variante mit на ist eher umgangssprachlich."
+        },
+        {
+            q: "Du sprichst Irina höflich an: „Sie sind klug“.",
+            options: [
+                "Ирина, вы умные.",
+                "Ирина, вы умная.",
+                "Ирина, ты умная."
+            ],
+            correct: 1,
+            explanation: "Bei der höflichen Anrede einer Einzelperson mit вы bleibt das Adjektiv im Singular (умная)."
+        },
+        {
+            q: "Du fragst Irina höflich: „Sind Sie gekommen?“",
+            options: [
+                "Ирина, вы пришла?",
+                "Ирина, вы пришли?",
+                "Ирина, вы пришел?"
+            ],
+            correct: 1,
+            explanation: "Anders als Adjektive stehen Verben bei der Anrede mit вы immer im Plural, auch wenn nur eine Person gemeint ist."
+        },
+        {
+            q: "Wie sagst du: „Ich liebe diesen Film sehr“?",
+            options: [
+                "Я много люблю этот фильм.",
+                "Я очень люблю этот фильм.",
+                "Я большой люблю этот фильм."
+            ],
+            correct: 1,
+            explanation: "Um die Intensität eines Gefühls zu beschreiben, nutzt man очень (sehr). Das Wort много (viel) bezieht sich eher auf Mengen oder Zeitdauern."
+        },
+        {
+            q: "Welches Wort ist korrekt geschrieben?",
+            options: [
+                "По-русский",
+                "По-русски",
+                "На русский"
+            ],
+            correct: 1,
+            explanation: "Adverbien, die eine Sprache beschreiben (auf welche Weise?), enden auf -и, zum Beispiel по-русски oder по-английски."
+        }
+    ];
+
+    let currentIdx = 0;
+    let score = 0;
+    let answered = false;
+
+    function initQuestion() {
+        answered = false;
+        const q = questions[currentIdx];
+        document.getElementById('question-number').innerText = `Frage ${currentIdx + 1} von ${questions.length}`;
+        document.getElementById('question-text').innerText = q.q;
+        document.getElementById('progress-bar').style.width = `${((currentIdx) / questions.length) * 100}%`;
+        
+        const optionsList = document.getElementById('options-list');
+        optionsList.innerHTML = '';
+        
+        q.options.forEach((opt, index) => {
+            const btn = document.createElement('button');
+            btn.className = 'option-btn';
+            btn.innerText = opt;
+            btn.onclick = () => selectOption(index);
+            optionsList.appendChild(btn);
+        });
+
+        document.getElementById('feedback-box').style.display = 'none';
+    }
+
+    function selectOption(index) {
+        if (answered) return;
+        answered = true;
+
+        const q = questions[currentIdx];
+        const buttons = document.querySelectorAll('.option-btn');
+        
+        if (index === q.correct) {
+            buttons[index].classList.add('correct');
+            score++;
+        } else {
+            buttons[index].classList.add('wrong');
+            buttons[q.correct].classList.add('correct');
+        }
+
+        buttons.forEach(btn => btn.disabled = true);
+
+        document.getElementById('explanation-content').innerHTML = 
+            `<strong>${index === q.correct ? 'Richtig!' : 'Nicht ganz korrekt.'}</strong><br>${q.explanation}`;
+        document.getElementById('feedback-box').style.display = 'block';
+    }
+
+    function goToNext() {
+        currentIdx++;
+        if (currentIdx < questions.length) {
+            initQuestion();
+        } else {
+            showResults();
+        }
+    }
+
+    function showResults() {
+        document.getElementById('progress-bar').style.width = '100%';
+        document.getElementById('quiz-container').style.display = 'none';
+        document.getElementById('result-screen').style.display = 'block';
+        document.getElementById('score-text').innerText = `Du hast ${score} von ${questions.length} Aufgaben richtig gelöst.`;
+    }
+
+    function restartQuiz() {
+        currentIdx = 0;
+        score = 0;
+        document.getElementById('quiz-container').style.display = 'block';
+        document.getElementById('result-screen').style.display = 'none';
+        initQuestion();
+    }
+
+    // Start
+    initQuestion();
+</script>
+
+</body>
+</html>
