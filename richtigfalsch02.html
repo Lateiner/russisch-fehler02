@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Russisch-Trainer: 10 häufige Fehler</title>
+    <style>
+        :root {
+            --primary-bg: #f0f4f8;
+            --card-bg: #ffffff;
+            --text-color: #2d3436;
+            --correct-color: #27ae60;
+            --wrong-color: #d63031;
+            --accent-blue: #0984e3;
+            --neutral-gray: #dfe6e9;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--primary-bg);
+            color: var(--text-color);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 15px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 550px;
+            background: var(--card-bg);
+            padding: 25px;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background-color: var(--neutral-gray);
+            border-radius: 4px;
+            margin-bottom: 20px;
+            overflow: hidden;
+        }
+
+        #progress-fill {
+            width: 0%;
+            height: 100%;
+            background-color: var(--accent-blue);
+            transition: width 0.3s ease;
+        }
+
+        h1 {
+            font-size: 1.4rem;
+            margin-bottom: 5px;
+            color: var(--accent-blue);
+        }
+
+        .counter {
+            font-size: 0.9rem;
+            color: #636e72;
+            margin-bottom: 20px;
+        }
+
+        .sentence-box {
+            background: #f9f9f9;
+            padding: 30px 15px;
+            border-radius: 15px;
+            border: 2px solid var(--neutral-gray);
+            margin-bottom: 25px;
+            min-height: 80px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .russian-text {
+            font-size: 1.6rem;
+            font-weight: 600;
+            line-height: 1.3;
+        }
+
+        .button-group {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin-bottom: 20px;
+        }
+
+        .btn-action {
+            background: none;
+            border: none;
+            cursor: pointer;
+            transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .btn-action:hover { transform: scale(1.15); }
+        .btn-action:active { transform: scale(0.9); }
+        .btn-action svg { width: 70px; height: 70px; }
+
+        .thumb-up { fill: var(--correct-color); }
+        .thumb-down { fill: var(--wrong-color); }
+
+        #feedback-area {
+            margin-top: 15px;
+            padding: 15px;
+            border-radius: 12px;
+            display: none;
+            text-align: left;
+        }
+
+        .feedback-correct { background-color: #e8f8f0; border: 1px solid var(--correct-color); color: #1e8449; }
+        .feedback-wrong { background-color: #fdf2f2; border: 1px solid var(--wrong-color); color: #a93226; }
+
+        .btn-next, .btn-restart {
+            margin-top: 15px;
+            padding: 12px 25px;
+            border: none;
+            border-radius: 8px;
+            background-color: var(--accent-blue);
+            color: white;
+            font-size: 1rem;
+            cursor: pointer;
+            width: 100%;
+        }
+
+        .btn-next:hover, .btn-restart:hover { background-color: #0773c5; }
+
+        #final-screen { display: none; }
+
+        @media (max-width: 400px) {
+            .russian-text { font-size: 1.3rem; }
+            .btn-action svg { width: 60px; height: 60px; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container" id="quiz-container">
+    <div class="progress-bar"><div id="progress-fill"></div></div>
+    <div class="counter" id="question-counter">Frage 1 von 10</div>
+    
+    <h1 id="instruction-title">Richtig oder Falsch?</h1>
+    
+    <div class="sentence-box">
+        <div class="russian-text" id="russian-sentence">Lade...</div>
+    </div>
+
+    <div class="button-group" id="input-group">
+        <button class="btn-action" onclick="handleChoice(true)">
+            <svg class="thumb-up" viewBox="0 0 24 24"><path d="M1 21h4V9H1v12zm22-11c0-1.1-.9-2-2-2h-6.31l.95-4.57.03-.32c0-.41-.17-.79-.44-1.06L14.17 1 7.59 7.59C7.22 7.95 7 8.45 7 9v10c0 1.1.9 2 2 2h9c.83 0 1.54-.5 1.84-1.22l3.02-7.05c.09-.23.14-.47.14-.73v-2z"/></svg>
+        </button>
+        <button class="btn-action" onclick="handleChoice(false)">
+            <svg class="thumb-down" viewBox="0 0 24 24"><path d="M15 3H6c-.83 0-1.54.5-1.84 1.22l-3.02 7.05c-.09.23-.14.47-.14.73v2c0 1.1.9 2 2 2h6.31l-.95 4.57-.03.32c0 .41.17.79.44 1.06L8.83 23l6.59-6.59c.37-.36.58-.86.58-1.41V5c0-1.1-.9-2-2-2zm4 0v12h4V3h-4z"/></svg>
+        </button>
+    </div>
+
+    <div id="feedback-area">
+        <strong id="feedback-title"></strong>
+        <p id="feedback-text" style="margin: 8px 0 0 0; font-size: 0.95rem;"></p>
+        <button class="btn-next" onclick="nextQuestion()">Nächste Frage</button>
+    </div>
+</div>
+
+<div class="container" id="final-screen">
+    <h1 style="color: var(--text-color);">Ergebnis</h1>
+    <p id="score-text" style="font-size: 1.2rem; margin: 20px 0;"></p>
+    <button class="btn-restart" onclick="restartQuiz()">Neustart</button>
+</div>
+
+<script>
+    const questions = [
+        {
+            text: "Здравствуйте! Добрый вечер!",
+            isCorrect: false,
+            explanation: "Im Russischen nutzt man nur eine Begrüßung zurzeit. Wähle entweder Здравствуйте oder Добрый вечер."
+        },
+        {
+            text: "Большое спасибо.",
+            isCorrect: true,
+            explanation: "Korrekt! Bei спасибо verwenden wir das Adjektiv im Neutrum (большое)."
+        },
+        {
+            text: "Очень спасибо.",
+            isCorrect: false,
+            explanation: "Falsch. Sehr danke existiert im Russischen nicht. Sage stattdessen большое спасибо."
+        },
+        {
+            text: "Спасибо за видео.",
+            isCorrect: true,
+            explanation: "Richtig! Nach спасибо nutzt man за + Akkusativ."
+        },
+        {
+            text: "Я ничего не знаю.",
+            isCorrect: true,
+            explanation: "Korrekt! Das ist die doppelte Verneinung (ничего + не), die im Russischen zwingend ist."
+        },
+        {
+            text: "Китайские люди.",
+            isCorrect: false,
+            explanation: "Falsch. Muttersprachler sagen китайцы oder люди из Китая."
+        },
+        {
+            text: "В эти выходные.",
+            isCorrect: true,
+            explanation: "Richtig! Das ist die neutrale Form für „an diesem Wochenende“."
+        },
+        {
+            text: "Ирина, вы умные.",
+            isCorrect: false,
+            explanation: "Falsch. Wenn man eine Person höflich mit вы anspricht, bleibt das Adjektiv im Singular: вы умная."
+        },
+        {
+            text: "Ирина, вы пришли?",
+            isCorrect: true,
+            explanation: "Korrekt! Bei Verben nutzt man nach вы immer den Plural, auch bei einer einzelnen Person."
+        },
+        {
+            text: "Я много люблю этот фильм.",
+            isCorrect: false,
+            explanation: "Falsch. Um Gefühle zu verstärken, nutzt man sehr (очень) oder stark (сильно), nicht viel (много)."
+        }
+    ];
+
+    let currentIdx = 0;
+    let score = 0;
+
+    function updateQuestion() {
+        const q = questions[currentIdx];
+        document.getElementById('russian-sentence').innerText = q.text;
+        document.getElementById('question-counter').innerText = `Frage ${currentIdx + 1} von ${questions.length}`;
+        document.getElementById('progress-fill').style.width = `${(currentIdx / questions.length) * 100}%`;
+        
+        document.getElementById('feedback-area').style.display = 'none';
+        document.getElementById('input-group').style.display = 'flex';
+    }
+
+    function handleChoice(userSaysCorrect) {
+        const q = questions[currentIdx];
+        const feedbackArea = document.getElementById('feedback-area');
+        const feedbackTitle = document.getElementById('feedback-title');
+        const feedbackText = document.getElementById('feedback-text');
+        const inputGroup = document.getElementById('input-group');
+
+        const isUserRight = (userSaysCorrect === q.isCorrect);
+        
+        if (isUserRight) {
+            score++;
+            feedbackTitle.innerText = "Richtig!";
+            feedbackArea.className = "feedback-correct";
+        } else {
+            feedbackTitle.innerText = "Nicht ganz.";
+            feedbackArea.className = "feedback-wrong";
+        }
+
+        feedbackText.innerText = q.explanation;
+        feedbackArea.style.display = 'block';
+        inputGroup.style.display = 'none';
+    }
+
+    function nextQuestion() {
+        currentIdx++;
+        if (currentIdx < questions.length) {
+            updateQuestion();
+        } else {
+            showFinalScreen();
+        }
+    }
+
+    function showFinalScreen() {
+        document.getElementById('quiz-container').style.display = 'none';
+        document.getElementById('final-screen').style.display = 'block';
+        document.getElementById('score-text').innerText = `Du hast ${score} von ${questions.length} Punkten erreicht!`;
+    }
+
+    function restartQuiz() {
+        currentIdx = 0;
+        score = 0;
+        document.getElementById('quiz-container').style.display = 'block';
+        document.getElementById('final-screen').style.display = 'none';
+        updateQuestion();
+    }
+
+    // Initialisierung
+    updateQuestion();
+</script>
+
+</body>
+</html>
