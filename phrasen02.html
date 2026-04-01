@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Russisch-Trainer: Dropdown-Quiz</title>
+    <style>
+        :root {
+            --bg-color: #f8f9fa;
+            --card-bg: #ffffff;
+            --primary-blue: #0984e3;
+            --correct-green: #27ae60;
+            --wrong-red: #d63031;
+            --text-dark: #2d3436;
+            --border: #dfe6e9;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-dark);
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .quiz-container {
+            width: 100%;
+            max-width: 600px;
+            background: var(--card-bg);
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.05);
+            text-align: center;
+        }
+
+        .progress-container {
+            width: 100%;
+            height: 8px;
+            background: var(--border);
+            border-radius: 4px;
+            margin-bottom: 25px;
+            overflow: hidden;
+        }
+
+        #progress-fill {
+            width: 0%;
+            height: 100%;
+            background: var(--primary-blue);
+            transition: width 0.3s ease;
+        }
+
+        h1 {
+            font-size: 1.5rem;
+            margin-bottom: 10px;
+            color: var(--primary-blue);
+        }
+
+        .sentence-area {
+            font-size: 1.4rem;
+            line-height: 1.8;
+            margin: 40px 0;
+            padding: 20px;
+            background: #fdfdfd;
+            border-radius: 12px;
+            border: 1px solid #f1f1f1;
+        }
+
+        /* Styling für das Dropdown */
+        select {
+            font-size: 1.2rem;
+            font-family: inherit;
+            padding: 5px 10px;
+            border: 2px solid var(--primary-blue);
+            border-radius: 8px;
+            background-color: white;
+            color: var(--text-dark);
+            cursor: pointer;
+            outline: none;
+            transition: all 0.2s;
+            margin: 0 5px;
+        }
+
+        select:hover {
+            background-color: #f0f7ff;
+        }
+
+        select:disabled {
+            background-color: #f9f9f9;
+            border-color: #ccc;
+            cursor: default;
+            color: var(--text-dark);
+            opacity: 1; /* Verhindert das Ausgrauen in manchen Browsern */
+        }
+
+        .feedback-area {
+            display: none;
+            margin-top: 20px;
+            padding: 20px;
+            border-radius: 12px;
+            text-align: left;
+            animation: fadeIn 0.4s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .feedback-correct { background-color: #e8f8f0; border-left: 5px solid var(--correct-green); color: #1e8449; }
+        .feedback-wrong { background-color: #fdf2f2; border-left: 5px solid var(--wrong-red); color: #a93226; }
+
+        .btn-next, .btn-restart {
+            margin-top: 20px;
+            padding: 12px 24px;
+            background: var(--primary-blue);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+        }
+
+        .btn-next:hover { background: #0773c5; }
+
+        #result-screen { display: none; }
+
+        @media (max-width: 480px) {
+            .sentence-area { font-size: 1.2rem; }
+            select { font-size: 1.1rem; }
+            .quiz-container { padding: 20px; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="quiz-container" id="quiz-box">
+    <div class="progress-container"><div id="progress-fill"></div></div>
+    <h1 id="title">Wähle die richtige Form</h1>
+    
+    <div class="sentence-area" id="sentence-display">
+        <!-- Der Satz mit Dropdown wird hier geladen -->
+    </div>
+
+    <div id="feedback-display" class="feedback-area">
+        <strong id="fb-status"></strong>
+        <p id="fb-explanation" style="margin: 8px 0 0 0; font-size: 0.95rem; line-height: 1.4;"></p>
+        <button class="btn-next" onclick="nextQuestion()">Nächste Aufgabe</button>
+    </div>
+</div>
+
+<div class="quiz-container" id="result-screen">
+    <h2>Training beendet!</h2>
+    <p id="score-summary" style="font-size: 1.2rem; margin: 20px 0;"></p>
+    <button class="btn-restart" onclick="restartQuiz()">Neustart</button>
+</div>
+
+<script>
+    const questions = [
+        {
+            before: "Здравствуйте!",
+            after: "вечер!",
+            options: ["Добрый", "и Добрый"],
+            correct: "Добрый",
+            explanation: "Ira erklärt: Wir nutzen nur eine Begrüßung auf einmal. Wähle entweder Здравствуйте oder Добрый вечер."
+        },
+        {
+            before: "",
+            after: "спасибо за помощь.",
+            options: ["Очень", "Большое"],
+            correct: "Большое",
+            explanation: "Sehr danke (Очень спасибо) gibt es nicht. Nutze stattdessen das Adjektiv im Neutrum: большое спасибо."
+        },
+        {
+            before: "Спасибо",
+            after: "ваше видео.",
+            options: ["для", "за"],
+            correct: "за",
+            explanation: "Nach dem Wort спасибо verwenden wir die Präposition за für den Grund des Dankes."
+        },
+        {
+            before: "Я ничего",
+            after: "знаю.",
+            options: ["не", "-"],
+            correct: "не",
+            explanation: "Im Russischen brauchen wir die doppelte Verneinung. Wenn du nichts (ничего) sagst, muss auch не vor dem Verb stehen."
+        },
+        {
+            before: "Моя подруга -",
+            after: ".",
+            options: ["китайская", "китаянка"],
+            correct: "китаянка",
+            explanation: "Muttersprachler bezeichnen Personen mit dem Substantiv der Nationalität (китаянка) statt mit dem Adjektiv."
+        },
+        {
+            before: "Я приду",
+            after: "выходные.",
+            options: ["в эти", "в этих"],
+            correct: "в эти",
+            explanation: "Die neutrale Form für an diesem Wochenende lautet в эти выходные."
+        },
+        {
+            before: "Ирина, вы такая",
+            after: "!",
+            options: ["умные", "умная"],
+            correct: "умная",
+            explanation: "Sprechen wir eine Einzelperson höflich mit вы an, bleibt das Adjektiv im Singular (умная)."
+        },
+        {
+            before: "Ирина, вы уже",
+            after: "?",
+            options: ["пришли", "пришла"],
+            correct: "пришли",
+            explanation: "Bei Verben nutzt man nach der Anrede mit Sie (вы) immer den Plural, egal ob eine oder mehrere Personen gemeint sind."
+        },
+        {
+            before: "Я",
+            after: "люблю этот фильм.",
+            options: ["много", "очень"],
+            correct: "очень",
+            explanation: "Gefühle werden mit sehr (очень) gesteigert. Viel (много) bezieht sich auf Mengen oder Zeitspannen."
+        },
+        {
+            before: "Я говорю",
+            after: ".",
+            options: ["по-русски", "по-русский"],
+            correct: "по-русski", // Tippfehler-Prävention im Code
+            correct: "по-русски",
+            explanation: "Adverbien, die Sprachen bezeichnen, enden im Russischen auf -и."
+        }
+    ];
+
+    let currentIdx = 0;
+    let score = 0;
+
+    function loadQuestion() {
+        const q = questions[currentIdx];
+        const display = document.getElementById('sentence-display');
+        
+        // Dropdown HTML zusammenbauen
+        display.innerHTML = `${q.before} 
+            <select id="user-select" onchange="checkAnswer()">
+                <option value="" disabled selected>...</option>
+                <option value="${q.options[0]}">${q.options[0]}</option>
+                <option value="${q.options[1]}">${q.options[1]}</option>
+            </select> 
+            ${q.after}`;
+
+        document.getElementById('feedback-display').style.display = 'none';
+        updateProgress();
+    }
+
+    function checkAnswer() {
+        const q = questions[currentIdx];
+        const selectElement = document.getElementById('user-select');
+        const userValue = selectElement.value;
+        const fbArea = document.getElementById('feedback-display');
+        const fbStatus = document.getElementById('fb-status');
+        const fbExpl = document.getElementById('fb-explanation');
+
+        selectElement.disabled = true;
+
+        if (userValue === q.correct) {
+            score++;
+            fbStatus.innerText = "Richtig!";
+            fbArea.className = "feedback-area feedback-correct";
+        } else {
+            fbStatus.innerText = "Nicht ganz.";
+            fbArea.className = "feedback-area feedback-wrong";
+        }
+
+        fbExpl.innerText = q.explanation;
+        fbArea.style.display = 'block';
+    }
+
+    function nextQuestion() {
+        currentIdx++;
+        if (currentIdx < questions.length) {
+            loadQuestion();
+        } else {
+            showFinal();
+        }
+    }
+
+    function updateProgress() {
+        const percent = (currentIdx / questions.length) * 100;
+        document.getElementById('progress-fill').style.width = percent + '%';
+    }
+
+    function showFinal() {
+        document.getElementById('quiz-box').style.display = 'none';
+        document.getElementById('result-screen').style.display = 'block';
+        document.getElementById('score-summary').innerText = `Du hast ${score} von ${questions.length} Aufgaben korrekt gelöst.`;
+    }
+
+    function restartQuiz() {
+        currentIdx = 0;
+        score = 0;
+        document.getElementById('quiz-box').style.display = 'block';
+        document.getElementById('result-screen').style.display = 'none';
+        loadQuestion();
+    }
+
+    // Quiz starten
+    loadQuestion();
+</script>
+
+</body>
+</html>
