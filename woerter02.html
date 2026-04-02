@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Russisch-Trainer: Wort-Schüttelrätsel</title>
+    <style>
+        :root {
+            --bg: #f4f7f9;
+            --card: #ffffff;
+            --primary: #0984e3;
+            --success: #27ae60;
+            --error: #d63031;
+            --text: #2d3436;
+            --gray: #dfe6e9;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 500px;
+            background: var(--card);
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+            text-align: center;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 6px;
+            background: var(--gray);
+            border-radius: 3px;
+            margin-bottom: 20px;
+            overflow: hidden;
+        }
+
+        #progress-fill {
+            width: 0%;
+            height: 100%;
+            background: var(--primary);
+            transition: width 0.3s ease;
+        }
+
+        h1 { font-size: 1.4rem; color: var(--primary); margin: 0 0 10px 0; }
+        .instruction { color: #636e72; font-size: 0.9rem; margin-bottom: 20px; }
+
+        /* Bereich für das aufgebaute Wort */
+        .build-area {
+            min-height: 60px;
+            background: #f9f9f9;
+            border: 2px dashed var(--primary);
+            border-radius: 12px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 5px;
+            padding: 10px;
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: var(--primary);
+        }
+
+        /* Silben-Kacheln */
+        .syllable-pool {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 30px;
+        }
+
+        .syllable-tile {
+            padding: 10px 20px;
+            background: white;
+            border: 2px solid var(--primary);
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1.2rem;
+            font-weight: 600;
+            transition: all 0.2s;
+            user-select: none;
+        }
+
+        .syllable-tile:hover {
+            background: var(--primary);
+            color: white;
+        }
+
+        .syllable-tile.used {
+            opacity: 0.3;
+            cursor: default;
+            pointer-events: none;
+        }
+
+        /* Buttons */
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+            font-size: 1rem;
+        }
+
+        .btn-clear { background: #b2bec3; color: white; }
+        .btn-check { background: var(--primary); color: white; }
+
+        /* Feedback */
+        #feedback {
+            display: none;
+            margin-top: 15px;
+            padding: 15px;
+            border-radius: 10px;
+            text-align: left;
+            animation: fadeIn 0.4s ease;
+        }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+
+        .fb-success { background: #e8f8f0; border-left: 5px solid var(--success); color: #1e8449; }
+        .fb-error { background: #fdf2f2; border-left: 5px solid var(--error); color: #a93226; }
+
+        .btn-next, .btn-restart {
+            margin-top: 10px;
+            padding: 12px;
+            background: var(--text);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            width: 100%;
+            cursor: pointer;
+        }
+
+        #result-screen { display: none; }
+
+        @media (max-width: 480px) {
+            .build-area { font-size: 1.4rem; min-height: 50px; }
+            .syllable-tile { padding: 8px 15px; font-size: 1rem; }
+            .container { padding: 20px; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container" id="quiz-ui">
+    <div class="progress-bar"><div id="progress-fill"></div></div>
+    <h1>Wort-Schüttelrätsel</h1>
+    <p class="instruction">Bilde das richtige Wort, indem du die Silben nacheinander anklickst.</p>
+
+    <div class="build-area" id="word-build-area"></div>
+
+    <div class="syllable-pool" id="syllable-container">
+        <!-- Silben werden hier geladen -->
+    </div>
+
+    <div class="controls">
+        <button class="btn btn-clear" onclick="clearBuildArea()">Löschen</button>
+        <button class="btn btn-check" onclick="checkWord()">Prüfen</button>
+    </div>
+
+    <div id="feedback">
+        <strong id="fb-status"></strong>
+        <p id="fb-explanation" style="margin: 5px 0 0 0; font-size: 0.9rem; line-height: 1.4;"></p>
+        <button class="btn-next" onclick="nextQuestion()">Nächstes Wort</button>
+    </div>
+</div>
+
+<div class="container" id="result-screen">
+    <h2>Super!</h2>
+    <p style="margin: 20px 0;">Du hast alle 10 Wörter korrekt zusammengesetzt.</p>
+    <button class="btn-restart" onclick="restart()">Neustart</button>
+</div>
+
+<script>
+    const questions = [
+        { word: "спасибо", syllables: ["спа", "си", "бо"], expl: "Dieses Wort nutzt man oft mit „большое“ oder „за“." },
+        { word: "ничего", syllables: ["ни", "че", "го"], expl: "Wichtig für die doppelte Verneinung: „ничего не...“." },
+        { word: "китаянка", syllables: ["ки", "та", "ян", "ка"], expl: "Das Substantiv für eine chinesische Frau." },
+        { word: "выходные", syllables: ["вы", "ход", "ны", "е"], expl: "Das russische Wort für „Wochenende“." },
+        { word: "по-русски", syllables: ["по-", "рус", "ски"], expl: "Adverbien für Sprachen enden immer auf -и." },
+        { word: "огромное", syllables: ["о", "гром", "но", "е"], expl: "Ein sächliches Adjektiv für „riesiges“ Danke." },
+        { word: "никогда", syllables: ["ни", "ког", "да"], expl: "Bedeutet „niemals“. Braucht auch ein „не“ vor dem Verb." },
+        { word: "подруга", syllables: ["под", "ру", "га"], expl: "Bedeutet „Freundin“. Ira nutzt es oft für Nationalitätenbeispiele." },
+        { word: "здравствуйте", syllables: ["здрав", "ствуй", "те"], expl: "Die förmliche Begrüßung. Nicht mit „Добрый вечер“ kombinieren." },
+        { word: "завтра", syllables: ["зав", "тра"], expl: "Bedeutet „morgen“. Ein kurzes, aber wichtiges Wort." }
+    ];
+
+    let currentIdx = 0;
+    let userSyllables = [];
+    let answered = false;
+
+    function shuffle(array) {
+        return array.sort(() => Math.random() - 0.5);
+    }
+
+    function initQuestion() {
+        answered = false;
+        userSyllables = [];
+        const q = questions[currentIdx];
+        const container = document.getElementById('syllable-container');
+        const buildArea = document.getElementById('word-build-area');
+        const feedback = document.getElementById('feedback');
+
+        buildArea.innerText = '';
+        feedback.style.display = 'none';
+        container.innerHTML = '';
+
+        const shuffled = shuffle([...q.syllables]);
+        shuffled.forEach(s => {
+            const tile = document.createElement('div');
+            tile.className = 'syllable-tile';
+            tile.innerText = s;
+            tile.onclick = () => addSyllable(s, tile);
+            container.appendChild(tile);
+        });
+
+        updateProgress();
+    }
+
+    function addSyllable(s, tile) {
+        if (answered) return;
+        userSyllables.push(s);
+        tile.classList.add('used');
+        document.getElementById('word-build-area').innerText = userSyllables.join('');
+    }
+
+    function clearBuildArea() {
+        if (answered) return;
+        userSyllables = [];
+        document.getElementById('word-build-area').innerText = '';
+        document.querySelectorAll('.syllable-tile').forEach(t => t.classList.remove('used'));
+    }
+
+    function checkWord() {
+        if (answered || userSyllables.length === 0) return;
+        
+        const q = questions[currentIdx];
+        const userWord = userSyllables.join('');
+        const feedback = document.getElementById('feedback');
+        const status = document.getElementById('fb-status');
+        const expl = document.getElementById('fb-explanation');
+
+        answered = true;
+
+        if (userWord === q.word) {
+            status.innerText = "Richtig!";
+            feedback.className = "fb-success";
+        } else {
+            status.innerText = "Nicht ganz.";
+            feedback.className = "fb-error";
+            document.getElementById('word-build-area').innerText = q.word; // Zeige Lösung
+        }
+
+        expl.innerText = q.expl;
+        feedback.style.display = 'block';
+    }
+
+    function nextQuestion() {
+        currentIdx++;
+        if (currentIdx < questions.length) {
+            initQuestion();
+        } else {
+            showFinal();
+        }
+    }
+
+    function updateProgress() {
+        const percent = (currentIdx / questions.length) * 100;
+        document.getElementById('progress-fill').style.width = percent + '%';
+    }
+
+    function showFinal() {
+        document.getElementById('quiz-ui').style.display = 'none';
+        document.getElementById('result-screen').style.display = 'block';
+    }
+
+    function restart() {
+        currentIdx = 0;
+        document.getElementById('quiz-ui').style.display = 'block';
+        document.getElementById('result-screen').style.display = 'none';
+        initQuestion();
+    }
+
+    initQuestion();
+</script>
+
+</body>
+</html>
