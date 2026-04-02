@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Russisch-Memory: Profi-Trainer</title>
+    <style>
+        :root {
+            --bg: #f8f9fa;
+            --primary: #0984e3;
+            --card-back: #2d3436;
+            --text-dark: #2d3436;
+            /* Farben für die Lösung (8 Paare) */
+            --color-0: #ff7675; --color-1: #74b9ff; --color-2: #55efc4; --color-3: #ffeaa7;
+            --color-4: #a29bfe; --color-5: #fab1a0; --color-6: #81ecec; --color-7: #fdcb6e;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg);
+            color: var(--text-dark);
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        h1 { font-size: 1.6rem; color: var(--primary); margin: 0 0 10px 0; }
+        
+        .stats { font-weight: bold; margin-bottom: 15px; }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 25px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 0.9rem;
+            transition: opacity 0.2s;
+        }
+
+        .btn-restart { background-color: var(--primary); color: white; }
+        .btn-solution { background-color: #636e72; color: white; }
+        .btn:hover { opacity: 0.8; }
+
+        /* Spielfeld */
+        .memory-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+            width: 100%;
+            max-width: 600px;
+            perspective: 1000px;
+        }
+
+        /* Karte */
+        .card {
+            aspect-ratio: 1 / 1;
+            position: relative;
+            cursor: pointer;
+            transform-style: preserve-3d;
+            transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.5s;
+        }
+
+        .card.flipped { transform: rotateY(180deg); }
+
+        /* Gefundene Paare verschwinden */
+        .card.matched {
+            opacity: 0;
+            pointer-events: none;
+            visibility: hidden;
+        }
+
+        .card-face {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden;
+            border-radius: 12px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            padding: 8px;
+            box-sizing: border-box;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            font-weight: 600;
+            font-size: 0.95rem;
+        }
+
+        .back { background-color: var(--card-back); color: white; }
+        .back::after { content: "?"; font-size: 2rem; }
+
+        .front {
+            background-color: white;
+            color: var(--text-dark);
+            transform: rotateY(180deg);
+            border: 2px solid var(--primary);
+        }
+
+        /* Lösungsmodus: Farben für Paare */
+        .solution-0 .front { background-color: var(--color-0); }
+        .solution-1 .front { background-color: var(--color-1); }
+        .solution-2 .front { background-color: var(--color-2); }
+        .solution-3 .front { background-color: var(--color-3); }
+        .solution-4 .front { background-color: var(--color-4); }
+        .solution-5 .front { background-color: var(--color-5); }
+        .solution-6 .front { background-color: var(--color-6); }
+        .solution-7 .front { background-color: var(--color-7); }
+
+        #win-msg {
+            display: none;
+            text-align: center;
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            position: fixed;
+            top: 50%;
+            transform: translateY(-50%);
+            z-index: 200;
+            width: 80%;
+            max-width: 400px;
+        }
+
+        @media (max-width: 480px) {
+            .memory-grid { grid-template-columns: repeat(3, 1fr); gap: 8px; }
+            .card-face { font-size: 0.75rem; }
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Russisch-Memory</h1>
+    
+    <div class="stats">Paare gelöst: <span id="matches-count">0</span> / 8</div>
+
+    <div class="controls">
+        <button class="btn btn-restart" onclick="restartGame()">Neustart</button>
+        <button class="btn btn-solution" onclick="showSolution()">Lösung anzeigen</button>
+    </div>
+
+    <div class="memory-grid" id="grid"></div>
+
+    <div id="win-msg">
+        <h2>Hervorragend!</h2>
+        <p>Du hast alle Paare gefunden!</p>
+        <button class="btn btn-restart" onclick="restartGame()">Nochmal spielen</button>
+    </div>
+
+<script>
+    const pairsData = [
+        { a: "по-русски", b: "Auf Russisch" },
+        { a: "много", b: "Menge / Dauer" },
+        { a: "очень", b: "Intensität" },
+        { a: "в эти выходные", b: "Wochenende (neutral)" },
+        { a: "на этих выходных", b: "Wochenende (ugs.)" },
+        { a: "бы + бы", b: "Wenn... dann (irreal)" },
+        { a: "не + ничего", b: "Doppelte Verneinung" },
+        { a: "за + Akkusativ", b: "Grund für Danke" }
+    ];
+
+    let flippedCards = [];
+    let matchesFound = 0;
+    let lockBoard = false;
+    let solutionActive = false;
+
+    function createBoard() {
+        const grid = document.getElementById('grid');
+        const winMsg = document.getElementById('win-msg');
+        grid.innerHTML = '';
+        winMsg.style.display = 'none';
+        matchesFound = 0;
+        flippedCards = [];
+        lockBoard = false;
+        solutionActive = false;
+        document.getElementById('matches-count').innerText = '0';
+
+        let deck = [];
+        pairsData.forEach((p, i) => {
+            deck.push({ text: p.a, pairIndex: i });
+            deck.push({ text: p.b, pairIndex: i });
+        });
+
+        // Mischen
+        deck.sort(() => Math.random() - 0.5);
+
+        deck.forEach(item => {
+            const card = document.createElement('div');
+            card.className = `card solution-${item.pairIndex}`;
+            card.dataset.pair = item.pairIndex;
+            
+            card.innerHTML = `
+                <div class="card-face back"></div>
+                <div class="card-face front">${item.text}</div>
+            `;
+            
+            card.addEventListener('click', flipCard);
+            grid.appendChild(card);
+        });
+    }
+
+    function flipCard() {
+        if (lockBoard || solutionActive) return;
+        if (this === flippedCards[0]) return;
+
+        this.classList.add('flipped');
+        flippedCards.push(this);
+
+        if (flippedCards.length === 2) {
+            checkMatch();
+        }
+    }
+
+    function checkMatch() {
+        lockBoard = true;
+        let isMatch = flippedCards[0].dataset.pair === flippedCards[1].dataset.pair;
+
+        if (isMatch) {
+            setTimeout(() => {
+                flippedCards[0].classList.add('matched');
+                flippedCards[1].classList.add('matched');
+                matchesFound++;
+                document.getElementById('matches-count').innerText = matchesFound;
+                flippedCards = [];
+                lockBoard = false;
+                if (matchesFound === pairsData.length) {
+                    document.getElementById('win-msg').style.display = 'block';
+                }
+            }, 600);
+        } else {
+            setTimeout(() => {
+                flippedCards[0].classList.remove('flipped');
+                flippedCards[1].classList.remove('flipped');
+                flippedCards = [];
+                lockBoard = false;
+            }, 1000);
+        }
+    }
+
+    function showSolution() {
+        if (solutionActive) return;
+        solutionActive = true;
+        lockBoard = true;
+        const allCards = document.querySelectorAll('.card');
+        allCards.forEach(card => {
+            card.classList.remove('matched');
+            card.style.visibility = "visible";
+            card.style.opacity = "1";
+            card.classList.add('flipped');
+        });
+    }
+
+    function restartGame() {
+        createBoard();
+    }
+
+    // Spielstart
+    createBoard();
+</script>
+
+</body>
+</html>
