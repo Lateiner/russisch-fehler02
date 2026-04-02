@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Russisch-Trainer: Fehler-Suche (Hotspot)</title>
+    <style>
+        :root {
+            --bg: #f8f9fa;
+            --google-blue: #4285f4;
+            --google-red: #ea4335;
+            --google-yellow: #fbbc05;
+            --google-green: #34a853;
+            --text-dark: #202124;
+            --border: #dfe1e5;
+        }
+
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background-color: white;
+            color: var(--text-dark);
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        /* Suchmaschinen-Optik */
+        .search-container {
+            margin-top: 10vh;
+            width: 90%;
+            max-width: 600px;
+            text-align: center;
+        }
+
+        .logo {
+            font-size: 3rem;
+            font-weight: bold;
+            margin-bottom: 30px;
+            letter-spacing: -2px;
+        }
+        .logo span:nth-child(1) { color: var(--google-blue); }
+        .logo span:nth-child(2) { color: var(--google-red); }
+        .logo span:nth-child(3) { color: var(--google-yellow); }
+        .logo span:nth-child(4) { color: var(--google-blue); }
+        .logo span:nth-child(5) { color: var(--google-green); }
+        .logo span:nth-child(6) { color: var(--google-red); }
+
+        .search-bar {
+            display: flex;
+            align-items: center;
+            padding: 10px 20px;
+            border: 1px solid var(--border);
+            border-radius: 24px;
+            box-shadow: 0 1px 6px rgba(32,33,36,0.28);
+            margin-bottom: 20px;
+            background: white;
+        }
+
+        .search-icon { color: #9aa0a6; margin-right: 15px; width: 20px; }
+
+        /* Hotspot-Bereich: Die Wörter im Suchschlitz */
+        .search-input-simulate {
+            flex-grow: 1;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            font-size: 1.2rem;
+            color: #3c4043;
+        }
+
+        .word-hotspot {
+            padding: 2px 4px;
+            cursor: pointer;
+            border-radius: 4px;
+            transition: background 0.2s;
+            user-select: none;
+        }
+
+        .word-hotspot:hover {
+            background-color: #f1f3f4;
+        }
+
+        /* Feedback-Stile */
+        .word-hotspot.correct-hit {
+            background-color: #e8f0fe;
+            color: var(--google-blue);
+            font-weight: bold;
+            text-decoration: underline;
+        }
+
+        .word-hotspot.wrong-hit {
+            background-color: #fce8e6;
+            color: var(--google-red);
+        }
+
+        .instruction {
+            color: #70757a;
+            margin-bottom: 40px;
+            font-size: 0.95rem;
+        }
+
+        /* Feedback Box */
+        #feedback {
+            display: none;
+            width: 90%;
+            max-width: 600px;
+            padding: 20px;
+            border-radius: 12px;
+            margin-top: 20px;
+            text-align: left;
+            animation: fadeIn 0.4s ease;
+        }
+
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+        .feedback-box-style {
+            background: #f8f9fa;
+            border-left: 5px solid var(--google-blue);
+        }
+
+        .btn-next {
+            margin-top: 15px;
+            padding: 10px 24px;
+            background: var(--google-blue);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 500;
+        }
+
+        #result-screen { display: none; text-align: center; margin-top: 10vh; }
+
+        @media (max-width: 480px) {
+            .logo { font-size: 2rem; }
+            .search-input-simulate { font-size: 1rem; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="search-container" id="quiz-ui">
+    <div class="logo">
+        <span>R</span><span>u</span><span>s</span><span>s</span><span>i</span><span>k</span>
+    </div>
+    
+    <p class="instruction">In der Suchanfrage hat sich ein Fehler eingeschlichen. Klicke direkt auf das <strong>falsche Wort</strong>!</p>
+
+    <div class="search-bar">
+        <div class="search-icon">
+            <svg focusable="false" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"></path></svg>
+        </div>
+        <div class="search-input-simulate" id="query-display">
+            <!-- Wörter erscheinen hier -->
+        </div>
+    </div>
+
+    <div id="feedback" class="feedback-box-style">
+        <strong id="fb-status"></strong>
+        <p id="fb-text" style="margin: 10px 0; line-height: 1.5;"></p>
+        <button class="btn-next" onclick="loadNext()">Nächste Suche</button>
+    </div>
+</div>
+
+<div id="result-screen">
+    <h1>Korrektur abgeschlossen!</h1>
+    <p id="score-text" style="font-size: 1.2rem;"></p>
+    <button class="btn-next" onclick="restart()">Neustart</button>
+</div>
+
+<script>
+    const tasks = [
+        {
+            words: ["о", "русском", "по-русский"],
+            errorIdx: 2,
+            correction: "по-русски",
+            explanation: "Ira hat in ihren Suchergebnissen gesehen, dass viele 'по-русский' schreiben. Das ist falsch! Adverbien für Sprachen enden auf -и."
+        },
+        {
+            words: ["спасибо", "для", "видео"],
+            errorIdx: 1,
+            correction: "за",
+            explanation: "Die Präposition 'для' (für) ist hier falsch. Wenn man den Grund für den Dank nennt, nutzt man 'за' + Akkusativ."
+        },
+        {
+            words: ["очень", "большое", "спасибо"],
+            errorIdx: 0,
+            correction: "(löschen)",
+            explanation: "Die Kombination 'очень спасибо' gibt es nicht. 'Большое спасибо' reicht völlig aus."
+        },
+        {
+            words: ["моя", "китайская", "подруга"],
+            errorIdx: 1,
+            correction: "китаянка",
+            explanation: "Muttersprachler sagen lieber 'моя подруга-китаянка' oder 'подруга из Китая' statt des Adjektivs."
+        },
+        {
+            words: ["я", "ничего", "знаю"],
+            errorIdx: 2,
+            correction: "не знаю",
+            explanation: "In diesem Satz fehlt die doppelte Verneinung. Wenn du 'ничего' (nichts) nutzt, muss auch 'не' vor das Verb."
+        },
+        {
+            words: ["в", "этих", "выходных"],
+            errorIdx: 1,
+            correction: "эти",
+            explanation: "Die neutrale Form für dieses Wochenende lautet 'в эти выходные' (Akkusativ Plural)."
+        },
+        {
+            words: ["Ирина,", "вы", "умные"],
+            errorIdx: 2,
+            correction: "умная",
+            explanation: "Bei der höflichen Anrede einer einzelnen Person bleibt das Adjektiv im Singular: 'вы умная'."
+        },
+        {
+            words: ["я", "много", "люблю", "фильм"],
+            errorIdx: 1,
+            correction: "очень",
+            explanation: "Gefühle werden mit 'очень' verstärkt. 'Много' nutzt man für Mengen, z.B. 'я много работаю'."
+        },
+        {
+            words: ["не", "могли", "бы", "бы", "помочь"],
+            errorIdx: 3,
+            correction: "(ein 'бы' weg)",
+            explanation: "Bei einer höflichen Bitte verwendet man die Partikel 'бы' nur einmal."
+        },
+        {
+            words: ["Здравствуйте!", "Добрый", "вечер!"],
+            errorIdx: 0,
+            correction: "(eins wählen)",
+            explanation: "Entscheide dich für eine Begrüßung. Beides hintereinander zu sagen, klingt im Russischen unnatürlich."
+        }
+    ];
+
+    let currentIdx = 0;
+    let score = 0;
+    let answered = false;
+
+    function renderQuery() {
+        answered = false;
+        const q = tasks[currentIdx];
+        const display = document.getElementById('query-display');
+        display.innerHTML = '';
+        document.getElementById('feedback').style.display = 'none';
+
+        q.words.forEach((word, idx) => {
+            const span = document.createElement('span');
+            span.className = 'word-hotspot';
+            span.innerText = word;
+            span.onclick = () => handleHit(idx, span);
+            display.appendChild(span);
+        });
+    }
+
+    function handleHit(idx, element) {
+        if (answered) return;
+        
+        const q = tasks[currentIdx];
+        const fb = document.getElementById('feedback');
+        const status = document.getElementById('fb-status');
+        const text = document.getElementById('fb-text');
+
+        if (idx === q.errorIdx) {
+            score++;
+            element.classList.add('correct-hit');
+            status.innerText = "Fehler gefunden!";
+            status.style.color = "var(--google-green)";
+            text.innerHTML = `Genau! Das Wort <strong>${q.words[idx]}</strong> ist hier falsch. Korrektur: <strong>${q.correction}</strong>. <br><br>${q.explanation}`;
+            answered = true;
+            fb.style.display = 'block';
+        } else {
+            element.classList.add('wrong-hit');
+            setTimeout(() => element.classList.remove('wrong-hit'), 500);
+        }
+    }
+
+    function loadNext() {
+        currentIdx++;
+        if (currentIdx < tasks.length) {
+            renderQuery();
+        } else {
+            showFinal();
+        }
+    }
+
+    function showFinal() {
+        document.getElementById('quiz-ui').style.display = 'none';
+        document.getElementById('result-screen').style.display = 'block';
+        document.getElementById('score-text').innerText = `Du hast ${score} von ${tasks.length} Suchanfragen erfolgreich korrigiert!`;
+    }
+
+    function restart() {
+        currentIdx = 0;
+        score = 0;
+        document.getElementById('quiz-ui').style.display = 'block';
+        document.getElementById('result-screen').style.display = 'none';
+        renderQuery();
+    }
+
+    // Start
+    renderQuery();
+</script>
+
+</body>
+</html>
