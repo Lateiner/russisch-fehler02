@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Russisch-Trainer: Die knifflige бы-Analyse</title>
+    <style>
+        :root {
+            --bg: #f4f7f9;
+            --card: #ffffff;
+            --primary: #6c5ce7;
+            --success: #27ae60;
+            --error: #d63031;
+            --text: #2d3436;
+            --light-gray: #f1f2f6;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 600px;
+            background: var(--card);
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.06);
+            text-align: center;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 6px;
+            background: var(--light-gray);
+            border-radius: 3px;
+            margin-bottom: 25px;
+            overflow: hidden;
+        }
+
+        #progress-fill {
+            width: 0%;
+            height: 100%;
+            background: var(--primary);
+            transition: width 0.3s ease;
+        }
+
+        h1 { font-size: 1.5rem; color: var(--primary); margin: 0 0 10px 0; }
+        .instruction { color: #636e72; font-size: 0.95rem; margin-bottom: 25px; line-height: 1.4; }
+
+        /* Satz-Display */
+        .context-box {
+            font-size: 1rem;
+            color: #636e72;
+            margin-bottom: 10px;
+            font-style: italic;
+        }
+
+        .sentence-box {
+            background: #fdfdfd;
+            border: 2px solid var(--light-gray);
+            padding: 25px 20px;
+            border-radius: 15px;
+            font-size: 1.4rem;
+            line-height: 1.6;
+            margin-bottom: 30px;
+            min-height: 80px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-weight: 500;
+        }
+
+        /* Buttons */
+        .btn-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .count-btn {
+            padding: 20px;
+            background: white;
+            border: 2px solid var(--primary);
+            border-radius: 15px;
+            cursor: pointer;
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: var(--primary);
+            transition: all 0.2s;
+        }
+
+        .count-btn:hover:not(:disabled) {
+            background: var(--primary);
+            color: white;
+        }
+
+        .count-btn:disabled { opacity: 0.6; cursor: default; }
+
+        /* Feedback */
+        #feedback {
+            display: none;
+            margin-top: 20px;
+            padding: 20px;
+            border-radius: 12px;
+            text-align: left;
+            animation: fadeIn 0.4s ease;
+        }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        .fb-success { background: #e8f8f0; border-left: 5px solid var(--success); }
+        .fb-error { background: #fdf2f2; border-left: 5px solid var(--error); }
+
+        .correct-sentence {
+            font-size: 1.2rem;
+            font-weight: bold;
+            margin: 15px 0;
+            color: var(--text);
+            padding: 10px;
+            background: white;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .highlight { color: var(--primary); background: #e8e6ff; padding: 0 4px; border-radius: 4px; }
+
+        .btn-action {
+            margin-top: 15px;
+            padding: 15px;
+            background: var(--text);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+        }
+
+        #result-screen { display: none; }
+
+        @media (max-width: 480px) {
+            .btn-group { grid-template-columns: 1fr; gap: 15px; }
+            .sentence-box { font-size: 1.2rem; padding: 15px; }
+            .container { padding: 20px; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container" id="quiz-ui">
+    <div class="progress-bar"><div id="progress-fill"></div></div>
+    <h1>Die бы-Analyse</h1>
+    <p class="instruction">Lies die deutsche Bedeutung. Wie oft musst du „бы“ in den russischen Satz einfügen, damit er korrekt ist?</p>
+
+    <div class="context-box" id="german-context">...</div>
+    <div class="sentence-box" id="russian-incomplete">...</div>
+
+    <div class="btn-group">
+        <button class="count-btn" onclick="checkChoice(1)">1-mal бы</button>
+        <button class="count-btn" onclick="checkChoice(2)">2-mal бы</button>
+    </div>
+
+    <div id="feedback">
+        <strong id="fb-status" style="font-size: 1.1rem;"></strong>
+        <div class="correct-sentence" id="russian-complete">...</div>
+        <p id="fb-text" style="margin: 0; line-height: 1.5; font-size: 0.95rem;"></p>
+        <button class="btn-action" onclick="nextQuestion()">Nächster Satz</button>
+    </div>
+</div>
+
+<div class="container" id="result-screen">
+    <h2>Training abgeschlossen!</h2>
+    <p id="score-text" style="font-size: 1.3rem; margin: 25px 0;"></p>
+    <button class="btn-action" onclick="restart()">Erneut starten</button>
+</div>
+
+<script>
+    const questions = [
+        {
+            german: "Wenn ich eine Million gewinnen würde, würde ich ein Flugzeug kaufen.",
+            incomplete: "Если я выиграла миллион, я купила самолёт.",
+            complete: "Если <span class='highlight'>бы</span> я выиграла миллион, я купила <span class='highlight'>бы</span> самолёт.",
+            correctCount: 2,
+            explanation: "Dies ist ein irrealer Bedingungssatz (Wenn-dann). Im Russischen muss das „бы“ in beiden Satzteilen stehen."
+        },
+        {
+            german: "Könnten Sie mir bitte helfen?",
+            incomplete: "Не могли вы мне помочь?",
+            complete: "Не могли <span class='highlight'>бы</span> вы мне помочь?",
+            correctCount: 1,
+            explanation: "Dies ist eine höfliche Bitte. Hier verwenden wir das „бы“ nur einmal."
+        },
+        {
+            german: "Wenn ich du wäre, würde ich nicht kündigen.",
+            incomplete: "Если я была тобой, я не уволилась.",
+            complete: "Если <span class='highlight'>бы</span> я была тобой, я <span class='highlight'>бы</span> не уволилась.",
+            correctCount: 2,
+            explanation: "Ein klassischer Bedingungssatz: Zwei Satzteile = zwei Mal „бы“."
+        },
+        {
+            german: "Könnten Sie mir sagen, wo die Metro ist?",
+            incomplete: "Вы не подсказали, где метро?",
+            complete: "Вы не подсказали <span class='highlight'>бы</span>, где метро?",
+            correctCount: 1,
+            explanation: "Eine höfliche Frage an einen Fremden. Einmal „бы“ reicht aus."
+        },
+        {
+            german: "Wenn das Wetter gut gewesen wäre, wären wir spazieren gegangen.",
+            incomplete: "Если погода была хорошей, мы пошли гулять.",
+            complete: "Если <span class='highlight'>бы</span> погода была хорошей, мы пошли <span class='highlight'>бы</span> гулять.",
+            correctCount: 2,
+            explanation: "Irreale Bedingung in der Vergangenheit: „бы“ muss zwingend in beide Teile des Satzes."
+        },
+        {
+            german: "Ich möchte Sie um einen Gefallen bitten.",
+            incomplete: "Я хотел попросить вас об услуге.",
+            complete: "Я хотел <span class='highlight'>бы</span> попросить вас об услуге.",
+            correctCount: 1,
+            explanation: "Ein höflich geäußerter Wunsch („Ich würde gerne...“). Hier wird nur ein „бы“ benötigt."
+        },
+        {
+            german: "Wenn ich singen könnte, wäre ich Sänger geworden.",
+            incomplete: "Если я умел петь, я стал певцом.",
+            complete: "Если <span class='highlight'>бы</span> я умел петь, я стал <span class='highlight'>бы</span> певцом.",
+            correctCount: 2,
+            explanation: "Eine Bedingung, die nicht der Realität entspricht. Zwei Mal „бы“ ist hier obligatorisch."
+        },
+        {
+            german: "Könnten Sie mir das Salz reichen?",
+            incomplete: "Вы не могли передать мне соль?",
+            complete: "Вы не могли <span class='highlight'>бы</span> передать мне соль?",
+            correctCount: 1,
+            explanation: "Eine klassische, höfliche Bitte am Tisch. Nur ein „бы“ verwenden."
+        },
+        {
+            german: "Wenn ich Zeit gehabt hätte, wäre ich gekommen.",
+            incomplete: "Если у меня было время, я пришёл.",
+            complete: "Если <span class='highlight'>бы</span> у меня было время, я <span class='highlight'>бы</span> пришёл.",
+            correctCount: 2,
+            explanation: "Ein Wenn-Dann-Satz in der Vergangenheit. Es braucht zwei „бы“."
+        },
+        {
+            german: "Ich würde Ihnen mit Freude helfen.",
+            incomplete: "Я с радостью вам помог.",
+            complete: "Я с радостью вам помог <span class='highlight'>бы</span>.",
+            correctCount: 1,
+            explanation: "Ein höfliches Angebot im Konjunktiv. Nur einmal „бы“."
+        }
+    ];
+
+    let currentIdx = 0;
+    let score = 0;
+    let answered = false;
+
+    function shuffle(array) {
+        return array.sort(() => Math.random() - 0.5);
+    }
+
+    let shuffledQuestions = [];
+
+    function initQuiz() {
+        shuffledQuestions = shuffle([...questions]);
+        currentIdx = 0;
+        score = 0;
+        loadQuestion();
+    }
+
+    function loadQuestion() {
+        answered = false;
+        const q = shuffledQuestions[currentIdx];
+        
+        document.getElementById('german-context').innerText = q.german;
+        document.getElementById('russian-incomplete').innerText = q.incomplete;
+        
+        document.getElementById('feedback').style.display = 'none';
+        document.querySelectorAll('.count-btn').forEach(btn => btn.disabled = false);
+        
+        updateProgress();
+    }
+
+    function checkChoice(userChoice) {
+        if (answered) return;
+        answered = true;
+
+        const q = shuffledQuestions[currentIdx];
+        const isCorrect = (userChoice === q.correctCount);
+        const fb = document.getElementById('feedback');
+        
+        document.querySelectorAll('.count-btn').forEach(btn => btn.disabled = true);
+
+        if (isCorrect) {
+            score++;
+            document.getElementById('fb-status').innerText = "Vollkommen richtig!";
+            document.getElementById('fb-status').style.color = "var(--success)";
+            fb.className = "fb-success";
+        } else {
+            document.getElementById('fb-status').innerText = "Das stimmt leider nicht.";
+            document.getElementById('fb-status').style.color = "var(--error)";
+            fb.className = "fb-error";
+        }
+
+        document.getElementById('russian-complete').innerHTML = q.complete;
+        document.getElementById('fb-text').innerText = q.explanation;
+        
+        fb.style.display = 'block';
+        fb.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    function nextQuestion() {
+        currentIdx++;
+        if (currentIdx < shuffledQuestions.length) {
+            loadQuestion();
+        } else {
+            showFinal();
+        }
+    }
+
+    function updateProgress() {
+        const percent = (currentIdx / shuffledQuestions.length) * 100;
+        document.getElementById('progress-fill').style.width = percent + '%';
+    }
+
+    function showFinal() {
+        document.getElementById('quiz-ui').style.display = 'none';
+        document.getElementById('result-screen').style.display = 'block';
+        document.getElementById('score-text').innerText = `Du hast ${score} von ${shuffledQuestions.length} Sätzen korrekt analysiert!`;
+    }
+
+    function restart() {
+        document.getElementById('quiz-ui').style.display = 'block';
+        document.getElementById('result-screen').style.display = 'none';
+        initQuiz();
+    }
+
+    initQuiz();
+</script>
+
+</body>
+</html>
