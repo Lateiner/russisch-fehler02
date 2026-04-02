@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Russisch-Trainer: Dialog mit Ira</title>
+    <style>
+        :root {
+            --bg: #f0f2f5;
+            --card: #ffffff;
+            --ira-color: #6c5ce7;
+            --user-color: #0984e3;
+            --correct: #27ae60;
+            --wrong: #d63031;
+            --text: #2d3436;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 15px;
+            box-sizing: border-box;
+        }
+
+        .dialog-container {
+            width: 100%;
+            max-width: 500px;
+            background: var(--card);
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .ira-header {
+            background: var(--ira-color);
+            color: white;
+            padding: 15px 20px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .avatar {
+            width: 45px; height: 45px;
+            background: #a29bfe;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-weight: bold;
+            border: 2px solid white;
+        }
+
+        .chat-area {
+            padding: 20px;
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            background: #fdfdfd;
+            min-height: 200px;
+        }
+
+        .bubble {
+            max-width: 85%;
+            padding: 12px 16px;
+            border-radius: 15px;
+            font-size: 1rem;
+            line-height: 1.4;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .ira-bubble { background: #eee; align-self: flex-start; border-bottom-left-radius: 2px; }
+        .user-bubble { background: var(--user-color); color: white; align-self: flex-end; border-bottom-right-radius: 2px; }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } }
+
+        .choice-area {
+            padding: 20px;
+            background: white;
+            border-top: 1px solid #eee;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .choice-btn {
+            background: white;
+            border: 2px solid var(--user-color);
+            color: var(--user-color);
+            padding: 10px 15px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 0.95rem;
+            font-weight: 600;
+            text-align: left;
+            transition: 0.2s;
+        }
+
+        .choice-btn:hover { background: var(--user-color); color: white; }
+
+        #feedback-area {
+            display: none;
+            padding: 15px;
+            margin: 10px 20px;
+            border-radius: 10px;
+            font-size: 0.9rem;
+        }
+
+        .fb-correct { background: #e8f8f0; border-left: 5px solid var(--correct); color: #1e8449; }
+        .fb-wrong { background: #fdf2f2; border-left: 5px solid var(--wrong); color: #a93226; }
+
+        .btn-next {
+            margin-top: 10px;
+            background: var(--text);
+            color: white;
+            border: none;
+            padding: 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            width: 100%;
+        }
+
+        #result-screen { display: none; padding: 40px 20px; text-align: center; }
+    </style>
+</head>
+<body>
+
+<div class="dialog-container" id="main-ui">
+    <div class="ira-header">
+        <div class="avatar">И</div>
+        <div>
+            <div style="font-weight: bold;">Ира</div>
+            <div style="font-size: 0.75rem; opacity: 0.9;">online</div>
+        </div>
+    </div>
+
+    <div class="chat-area" id="chat-box">
+        <div class="bubble ira-bubble" id="ira-text"></div>
+    </div>
+
+    <div id="feedback-area">
+        <strong id="fb-status"></strong>
+        <p id="fb-text" style="margin: 5px 0 0 0;"></p>
+        <button class="btn-next" onclick="advanceStep()">Weiter</button>
+    </div>
+
+    <div class="choice-area" id="choices"></div>
+</div>
+
+<div class="dialog-container" id="result-screen">
+    <div class="ira-header"><strong>Gespräch beendet</strong></div>
+    <div style="padding: 30px; text-align: center;">
+        <p>Du hast den Dialog erfolgreich gemeistert!</p>
+        <button class="btn-next" onclick="restart()">Neustart</button>
+    </div>
+</div>
+
+<script>
+    const dialogData = [
+        {
+            ira: "Привет! Мы давно не виделись. Как поздороваешься?",
+            choices: [
+                { text: "Здравствуйте! Добрый вечер!", correct: false, fb: "Fehler: Nutze nur eine Begrüßung. Beides zusammen klingt unnatürlich." },
+                { text: "Здравствуйте, Ира!", correct: true, fb: "Richtig! Eine einfache, höfliche Begrüßung ist perfekt." },
+                { text: "Привет, очень спасибо!", correct: false, fb: "Falsch: 'Sehr danke' gibt es nicht. Sag 'большое спасибо'." }
+            ]
+        },
+        {
+            ira: "Как тебе мой канал? Тебе нравится, как я рассказываю?",
+            choices: [
+                { text: "Да, я много люблю твой канал.", correct: false, fb: "Fehler: Gefühle verstärken wir mit 'очень', nicht mit 'много'." },
+                { text: "Да, я очень люблю твой канал!", correct: true, fb: "Richtig! 'Очень' beschreibt die Intensität deiner Gefühle." },
+                { text: "Да, я сильно люблю твой канал.", correct: true, fb: "Richtig! 'Сильно' kann man auch verwenden, um Gefühle zu verstärken." }
+            ]
+        },
+        {
+            ira: "В комментариях часто пишут: 'китайские люди'. Это правильно?",
+            choices: [
+                { text: "Да, это звучит нормально.", correct: false, fb: "Falsch: Ira sagt, man sollte lieber Substantive nutzen: 'китайцы'." },
+                { text: "Нет, лучше сказать 'китайцы'.", correct: true, fb: "Richtig! Nationalitäten-Substantive klingen viel natürlicher." },
+                { text: "Нет, надо 'люди из Китая'.", correct: true, fb: "Richtig! Die Form 'из + Land' ist eine gute Alternative." }
+            ]
+        },
+        {
+            ira: "Ты знаешь, о чём они пишут? Или ничего не понял?",
+            choices: [
+                { text: "Я ничего знаю.", correct: false, fb: "Fehler: Hier fehlt die doppelte Verneinung. Richtig: 'Я ничего НЕ знаю'." },
+                { text: "Я ничего не знаю.", correct: true, fb: "Richtig! 'Ничего' verlangt zwingend ein 'не' vor dem Verb." },
+                { text: "Я не знаю ничего.", correct: true, fb: "Richtig! Die doppelte Verneinung ist hier korrekt umgesetzt." }
+            ]
+        },
+        {
+            ira: "Кстати, когда ты планируешь отдыхать?",
+            choices: [
+                { text: "В этих выходных.", correct: false, fb: "Falsch: Nach 'в' folgt hier der Akkusativ Plural: 'в эти выходные'." },
+                { text: "В эти выходные.", correct: true, fb: "Richtig! Das ist die neutrale Form für 'dieses Wochenende'." },
+                { text: "На этих выходных.", correct: true, fb: "Richtig! Das ist die umgangssprachliche Form." }
+            ]
+        },
+        {
+            ira: "Отлично! Если бы я была тобой, я бы тоже отдыхала. Понял правило?",
+            choices: [
+                { text: "Да, в условии нужно два 'бы'.", correct: true, fb: "Richtig! In irrealen Wenn-Dann-Sätzen steht 'бы' in beiden Teilen." },
+                { text: "Да, 'бы' нужно только один раз.", correct: false, fb: "Falsch: Ira erklärt, dass man es im Bedingungssatz zweimal braucht." },
+                { text: "Нет, не могли бы вы помочь?", correct: true, fb: "Richtig! In einer höflichen Bitte (как эта) nutzt man 'бы' nur einmal." }
+            ]
+        },
+        {
+            ira: "И последний вопрос: как правильно назвать мой канал?",
+            choices: [
+                { text: "О русском по-русский.", correct: false, fb: "Falsch: Adverbien für Sprachen enden auf -и: 'по-русски'." },
+                { text: "О русском по-русски.", correct: true, fb: "Richtig! 'по-русски' ist die korrekte Schreibweise." },
+                { text: "О русском на русском.", correct: true, fb: "Richtig! 'На русском' (языке) ist eine korrekte Alternative." }
+            ]
+        }
+    ];
+
+    let currentStep = 0;
+
+    function initStep() {
+        const step = dialogData[currentStep];
+        document.getElementById('ira-text').innerText = step.ira;
+        const choicesContainer = document.getElementById('choices');
+        choicesContainer.innerHTML = '';
+        document.getElementById('feedback-area').style.display = 'none';
+
+        step.choices.forEach(choice => {
+            const btn = document.createElement('button');
+            btn.className = 'choice-btn';
+            btn.innerText = choice.text;
+            btn.onclick = () => makeChoice(choice);
+            choicesContainer.appendChild(btn);
+        });
+    }
+
+    function makeChoice(choice) {
+        const chatBox = document.getElementById('chat-box');
+        const userBubble = document.createElement('div');
+        userBubble.className = 'bubble user-bubble';
+        userBubble.innerText = choice.text;
+        chatBox.appendChild(userBubble);
+
+        document.getElementById('choices').style.display = 'none';
+
+        const fbArea = document.getElementById('feedback-area');
+        const fbStatus = document.getElementById('fb-status');
+        const fbText = document.getElementById('fb-text');
+
+        fbArea.style.display = 'block';
+        if (choice.correct) {
+            fbStatus.innerText = "Super!";
+            fbArea.className = "fb-correct";
+        } else {
+            fbStatus.innerText = "Achtung!";
+            fbArea.className = "fb-wrong";
+        }
+        fbText.innerText = choice.fb;
+        
+        chatBox.scrollTop = chatBox.scrollHeight;
+    }
+
+    function advanceStep() {
+        currentStep++;
+        if (currentStep < dialogData.length) {
+            const chatBox = document.getElementById('chat-box');
+            chatBox.innerHTML = '<div class="bubble ira-bubble" id="ira-text"></div>';
+            document.getElementById('choices').style.display = 'flex';
+            initStep();
+        } else {
+            document.getElementById('main-ui').style.display = 'none';
+            document.getElementById('result-screen').style.display = 'block';
+        }
+    }
+
+    function restart() {
+        currentStep = 0;
+        document.getElementById('chat-box').innerHTML = '<div class="bubble ira-bubble" id="ira-text"></div>';
+        document.getElementById('main-ui').style.display = 'flex';
+        document.getElementById('choices').style.display = 'flex';
+        document.getElementById('result-screen').style.display = 'none';
+        initStep();
+    }
+
+    initStep();
+</script>
+
+</body>
+</html>
