@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Russisch-Trainer: 10 Nationalitäten</title>
+    <style>
+        :root {
+            --bg: #f4f7f6;
+            --card: #ffffff;
+            --primary: #0984e3;
+            --success: #27ae60;
+            --error: #d63031;
+            --text: #2d3436;
+            --border: #dfe6e9;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 10px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 700px;
+            background: var(--card);
+            padding: 20px;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+            text-align: center;
+            box-sizing: border-box;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 6px;
+            background: var(--border);
+            border-radius: 3px;
+            margin-bottom: 15px;
+            overflow: hidden;
+        }
+
+        #progress-fill {
+            width: 0%;
+            height: 100%;
+            background: var(--primary);
+            transition: width 0.3s ease;
+        }
+
+        h1 { font-size: 1.3rem; color: var(--primary); margin: 0 0 5px 0; }
+        .instruction { color: #636e72; font-size: 0.85rem; margin-bottom: 15px; }
+
+        /* Das Zuordnungs-Gitter */
+        .matching-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .column {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .tile {
+            padding: 12px 8px;
+            background: white;
+            border: 2px solid var(--border);
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 600;
+            transition: all 0.2s ease;
+            user-select: none;
+            min-height: 45px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-sizing: border-box;
+        }
+
+        /* Status-Farben */
+        .tile.selected { border-color: var(--primary); background: #f0f7ff; }
+        .tile.matched { background: var(--success); color: white; border-color: var(--success); cursor: default; }
+        .tile.error { background: var(--error); color: white; border-color: var(--error); }
+
+        .btn-restart {
+            margin-top: 10px;
+            padding: 15px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 1rem;
+            width: 100%;
+            cursor: pointer;
+        }
+
+        #result-screen { display: none; }
+
+        @media (max-width: 480px) {
+            .tile { font-size: 0.85rem; padding: 10px 5px; }
+            h1 { font-size: 1.1rem; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container" id="quiz-ui">
+    <div class="progress-bar"><div id="progress-fill"></div></div>
+    <h1>Nationalitäten-Paare</h1>
+    <p class="instruction">Tippe auf ein Land und dann auf die passende Person.</p>
+
+    <div class="matching-grid">
+        <div class="column" id="left-column">
+            <!-- Länder Kacheln -->
+        </div>
+        <div class="column" id="right-column">
+            <!-- Personen Kacheln -->
+        </div>
+    </div>
+</div>
+
+<div class="container" id="result-screen">
+    <h2>Ausgezeichnet!</h2>
+    <p style="font-size: 1.1rem; margin: 20px 0;">Du hast alle 10 Nationalitäten korrekt zugeordnet.</p>
+    <button class="btn-restart" onclick="restart()">Erneut starten</button>
+</div>
+
+<script>
+    const pairs = [
+        { country: "Китай", person: "китаянка" },
+        { country: "Россия", person: "человек из России" },
+        { country: "Германия", person: "немец" },
+        { country: "Италия", person: "итальянец" },
+        { country: "Франция", person: "француженка" },
+        { country: "Англия", person: "англичанка" },
+        { country: "Испания", person: "испанец" },
+        { country: "Америка", person: "американец" },
+        { country: "Япония", person: "японка" },
+        { country: "Турция", person: "турок" }
+    ];
+
+    let selectedLeft = null;
+    let selectedRight = null;
+    let matchedCount = 0;
+
+    function shuffle(array) {
+        return array.sort(() => Math.random() - 0.5);
+    }
+
+    function initBoard() {
+        const leftCol = document.getElementById('left-column');
+        const rightCol = document.getElementById('right-column');
+        leftCol.innerHTML = '';
+        rightCol.innerHTML = '';
+        
+        const shuffledLeft = shuffle([...pairs]);
+        const shuffledRight = shuffle([...pairs]);
+
+        shuffledLeft.forEach(pair => {
+            const tile = document.createElement('div');
+            tile.className = 'tile';
+            tile.innerText = pair.country;
+            tile.dataset.value = pair.country;
+            tile.onclick = () => selectLeft(tile);
+            leftCol.appendChild(tile);
+        });
+
+        shuffledRight.forEach(pair => {
+            const tile = document.createElement('div');
+            tile.className = 'tile';
+            tile.innerText = pair.person;
+            tile.dataset.match = pair.country;
+            tile.onclick = () => selectRight(tile);
+            rightCol.appendChild(tile);
+        });
+    }
+
+    function selectLeft(tile) {
+        if (tile.classList.contains('matched') || tile.classList.contains('error')) return;
+        if (selectedLeft) selectedLeft.classList.remove('selected');
+        selectedLeft = tile;
+        selectedLeft.classList.add('selected');
+        checkMatch();
+    }
+
+    function selectRight(tile) {
+        if (tile.classList.contains('matched') || tile.classList.contains('error')) return;
+        if (selectedRight) selectedRight.classList.remove('selected');
+        selectedRight = tile;
+        selectedRight.classList.add('selected');
+        checkMatch();
+    }
+
+    function checkMatch() {
+        if (selectedLeft && selectedRight) {
+            const l = selectedLeft;
+            const r = selectedRight;
+
+            if (l.dataset.value === r.dataset.match) {
+                // Treffer
+                l.className = 'tile matched';
+                r.className = 'tile matched';
+                selectedLeft = null;
+                selectedRight = null;
+                matchedCount++;
+                updateProgress();
+                if (matchedCount === pairs.length) {
+                    setTimeout(showFinal, 600);
+                }
+            } else {
+                // Kein Treffer
+                l.classList.add('error');
+                r.classList.add('error');
+                selectedLeft = null;
+                selectedRight = null;
+                setTimeout(() => {
+                    l.classList.remove('error', 'selected');
+                    r.classList.remove('error', 'selected');
+                }, 500);
+            }
+        }
+    }
+
+    function updateProgress() {
+        const percent = (matchedCount / pairs.length) * 100;
+        document.getElementById('progress-fill').style.width = percent + '%';
+    }
+
+    function showFinal() {
+        document.getElementById('quiz-ui').style.display = 'none';
+        document.getElementById('result-screen').style.display = 'block';
+    }
+
+    function restart() {
+        matchedCount = 0;
+        selectedLeft = null;
+        selectedRight = null;
+        document.getElementById('progress-fill').style.width = '0%';
+        document.getElementById('quiz-ui').style.display = 'block';
+        document.getElementById('result-screen').style.display = 'none';
+        initBoard();
+    }
+
+    initBoard();
+</script>
+
+</body>
+</html>
