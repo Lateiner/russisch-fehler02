@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Russisch-Lernkartei</title>
+    <style>
+        :root {
+            --primary-green: #2e7d32;
+            --light-green: #4caf50;
+            --bg-green: #e8f5e9;
+            --card-white: #ffffff;
+            --text-dark: #1b5e20;
+            --transition-speed: 0.6s;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-green);
+            color: var(--text-dark);
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            width: 90%;
+            max-width: 600px;
+            text-align: center;
+            padding: 20px;
+        }
+
+        h1 {
+            font-size: 1.8rem;
+            margin-bottom: 10px;
+        }
+
+        .progress {
+            font-size: 1.1rem;
+            margin-bottom: 20px;
+            font-weight: bold;
+        }
+
+        /* Flashcard 3D Structure */
+        .card-container {
+            perspective: 1000px;
+            width: 100%;
+            height: 300px;
+            cursor: pointer;
+            margin-bottom: 30px;
+        }
+
+        .card-inner {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            text-align: center;
+            transition: transform var(--transition-speed);
+            transform-style: preserve-3d;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            border-radius: 15px;
+        }
+
+        .card-inner.is-flipped {
+            transform: rotateY(180deg);
+        }
+
+        .card-front, .card-back {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            border-radius: 15px;
+            background: var(--card-white);
+            padding: 20px;
+            box-sizing: border-box;
+            border: 2px solid var(--light-green);
+        }
+
+        .card-back {
+            transform: rotateY(180deg);
+            background-color: #f1f8e9;
+        }
+
+        .text {
+            font-weight: bold;
+            line-height: 1.4;
+        }
+
+        /* Controls */
+        .controls {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .nav-buttons {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 15px;
+            gap: 10px;
+        }
+
+        button {
+            padding: 12px 20px;
+            font-size: 1rem;
+            cursor: pointer;
+            border: none;
+            border-radius: 8px;
+            background-color: var(--primary-green);
+            color: white;
+            transition: background 0.3s, transform 0.1s;
+            font-weight: bold;
+            flex: 1;
+        }
+
+        button:hover {
+            background-color: var(--light-green);
+        }
+
+        button:active {
+            transform: scale(0.98);
+        }
+
+        .btn-secondary {
+            background-color: #607d8b;
+        }
+
+        .btn-secondary:hover {
+            background-color: #78909c;
+        }
+
+        /* Key-Hints (Desktop only) */
+        .hints {
+            margin-top: 20px;
+            font-size: 0.8rem;
+            color: #666;
+        }
+
+        @media (max-width: 480px) {
+            .card-container { height: 250px; }
+            h1 { font-size: 1.4rem; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Russisch-Vokabeltrainer</h1>
+    <div class="progress" id="progress">1 / 85</div>
+
+    <div class="card-container" id="cardContainer" onclick="flipCard()">
+        <div class="card-inner" id="cardInner">
+            <div class="card-front">
+                <div class="text" id="frontText">Lädt...</div>
+            </div>
+            <div class="card-back">
+                <div class="text" id="backText">Lädt...</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="nav-buttons">
+        <button onclick="prevCard()">← Vorherige</button>
+        <button onclick="nextCard()">Nächste →</button>
+    </div>
+
+    <div class="controls">
+        <button class="btn-secondary" onclick="shuffleCards()">Mischen 🎲</button>
+        <button class="btn-secondary" onclick="goHome()">An den Anfang 🏠</button>
+    </div>
+
+    <div class="hints">
+        Tipp: <b>Leertaste/Enter</b> zum Umdrehen | <b>Pfeiltasten</b> für Navigation
+    </div>
+</div>
+
+<script>
+    const vocabulary = [
+        {front: "здра́вствуйте", back: "guten Tag / hallo"},
+        {front: "до́брый ве́чер", back: "guten Abend"},
+        {front: "приве́т", back: "hallo (informell)"},
+        {front: "оши́бка", back: "der Fehler"},
+        {front: "популя́рный", back: "beliebt / populär"},
+        {front: "студе́нт", back: "der Student"},
+        {front: "иностра́нец", back: "der Ausländer"},
+        {front: "изуча́ть / изучи́ть", back: "lernen / studieren"},
+        {front: "смотре́ть / посмотре́ть", back: "schauen / zusehen"},
+        {front: "реша́ть / реши́ть", back: "entscheiden / beschließen"},
+        {front: "расска́зывать / рассказа́ть", back: "erzählen / berichten"},
+        {front: "де́лать / сде́лать", back: "machen / tun"},
+        {front: "объясня́ть / объясни́ть", back: "erklären"},
+        {front: "понима́ть / поня́ть", back: "verstehen"},
+        {front: "выбира́ть / вы́брать", back: "wählen / auswählen"},
+        {front: "испо́льзовать (NSV/SV)", back: "verwenden / benutzen"},
+        {front: "свя́зывать / связа́ть", back: "verbinden / verknüpfen"},
+        {front: "спаси́бо", back: "danke"},
+        {front: "большо́е", back: "großes (Neutrum)"},
+        {front: "огро́мное", back: "riesiges (Neutrum)"},
+        {front: "за", back: "für (Grund des Dankes)"},
+        {front: "кни́га", back: "das Buch"},
+        {front: "фильм", back: "der Film"},
+        {front: "ви́део", back: "das Video"},
+        {front: "тренирова́ться / потренирова́ться", back: "üben / trainieren"},
+        {front: "проверя́ть / прове́рить", back: "prüfen / kontrollieren"},
+        {front: "ничего́", back: "nichts"},
+        {front: "никто́", back: "niemand"},
+        {front: "нигде́", back: "nirgends"},
+        {front: "никогда́", back: "niemals"},
+        {front: "никуда́", back: "nirgendwohin"},
+        {front: "не", back: "nicht"},
+        {front: "знать / узна́ть", back: "wissen / erfahren"},
+        {front: "слы́шать / услы́шать", back: "hören"},
+        {front: "идти́ / пойти́", back: "gehen"},
+        {front: "разгова́ривать / поговори́ть", back: "sich unterhalten / sprechen"},
+        {front: "кита́ец", back: "der Chinese"},
+        {front: "китая́нка", back: "die Chinesin"},
+        {front: "Китай", back: "China"},
+        {front: "Россия", back: "Russland"},
+        {front: "подру́га", back: "die Freundin"},
+        {front: "челове́к", back: "der Mensch"},
+        {front: "лю́ди", back: "die Leute / Menschen"},
+        {front: "национа́льность", back: "die Nationalität"},
+        {front: "повторя́ть / повтори́ть", back: "wiederholen"},
+        {front: "выходны́е", back: "das Wochenende"},
+        {front: "э́ти", back: "diese"},
+        {front: "сле́дующие", back: "nächste"},
+        {front: "когда́", back: "wann"},
+        {front: "разни́ца", back: "der Unterschied"},
+        {front: "значе́ние", back: "die Bedeutung"},
+        {front: "стиль", back: "der Stil"},
+        {front: "нейтра́льный", back: "neutral"},
+        {front: "разгово́рный", back: "umgangssprachlich"},
+        {front: "вы", back: "Sie / ihr"},
+        {front: "уважи́тельно", back: "respektvoll"},
+        {front: "обраща́ться / обрати́ться", back: "sich wenden an / ansprechen"},
+        {front: "у́мный", back: "klug / schlau"},
+        {front: "оди́н / одна́ / одни́", back: "ein / eine / allein"},
+        {front: "приходи́ть / прийти́", back: "kommen / ankommen"},
+        {front: "рабо́тать / порабо́тать", back: "arbeiten"},
+        {front: "жить / прожи́ть", back: "leben / wohnen"},
+        {front: "люби́ть / полюби́ть", back: "lieben / gern haben"},
+        {front: "скуча́ть / поскуча́ть", back: "vermissen / sich langweilen"},
+        {front: "си́льно", back: "stark / sehr"},
+        {front: "о́чень", back: "sehr"},
+        {front: "мно́го", back: "viel"},
+        {front: "сте́пень", back: "der Grad / das Ausmaß"},
+        {front: "у́ровень", back: "das Niveau / die Stufe"},
+        {front: "бы", back: "würde / wäre (Konjunktiv-Partikel)"},
+        {front: "усло́вие", back: "die Bedingung"},
+        {front: "выи́грывать / вы́играть", back: "gewinnen"},
+        {front: "покупа́ть / купи́ть", back: "kaufen"},
+        {front: "самолёт", back: "das Flugzeug"},
+        {front: "увольня́ться / уво́литься", back: "kündigen"},
+        {front: "помога́ть / помо́чь", back: "helfen"},
+        {front: "иска́ть / поиска́ть", back: "suchen"},
+        {front: "по-ру́сски", back: "auf Russisch (Adverb)"},
+        {front: "ру́сский язы́к", back: "die russische Sprache"},
+        {front: "кана́л", back: "der Kanal"},
+        {front: "коммента́рий", back: "der Kommentar"},
+        {front: "пра́вило", back: "die Regel"},
+        {front: "ча́сто", back: "oft"},
+        {front: "неда́вно", back: "vor Kurzem / neulich"},
+        {front: "уда́чи", back: "viel Glück / Erfolg"}
+    ];
+
+    let currentCards = [...vocabulary];
+    let currentIndex = 0;
+    let isFlipped = false;
+
+    const cardInner = document.getElementById('cardInner');
+    const frontText = document.getElementById('frontText');
+    const backText = document.getElementById('backText');
+    const progressText = document.getElementById('progress');
+
+    // Dynamische Schriftgröße
+    function adjustFontSize(element, text) {
+        const length = text.length;
+        if (length > 30) {
+            element.style.fontSize = "1.2rem";
+        } else if (length > 15) {
+            element.style.fontSize = "1.8rem";
+        } else {
+            element.style.fontSize = "2.4rem";
+        }
+    }
+
+    function updateCard() {
+        const card = currentCards[currentIndex];
+        
+        // Flip zurücksetzen bevor Text geändert wird (optional, sieht sauberer aus)
+        isFlipped = false;
+        cardInner.classList.remove('is-flipped');
+        
+        setTimeout(() => {
+            frontText.innerText = card.front;
+            backText.innerText = card.back;
+            
+            adjustFontSize(frontText, card.front);
+            adjustFontSize(backText, card.back);
+            
+            progressText.innerText = `${currentIndex + 1} / ${currentCards.length}`;
+        }, 100);
+    }
+
+    function flipCard() {
+        isFlipped = !isFlipped;
+        cardInner.classList.toggle('is-flipped');
+    }
+
+    function nextCard() {
+        if (currentIndex < currentCards.length - 1) {
+            currentIndex++;
+            updateCard();
+        } else {
+            // Optional: Loop zum Anfang
+            currentIndex = 0;
+            updateCard();
+        }
+    }
+
+    function prevCard() {
+        if (currentIndex > 0) {
+            currentIndex--;
+            updateCard();
+        } else {
+            currentIndex = currentCards.length - 1;
+            updateCard();
+        }
+    }
+
+    function shuffleCards() {
+        // Fisher-Yates Shuffle
+        for (let i = currentCards.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [currentCards[i], currentCards[j]] = [currentCards[j], currentCards[i]];
+        }
+        currentIndex = 0;
+        updateCard();
+    }
+
+    function goHome() {
+        currentIndex = 0;
+        updateCard();
+    }
+
+    // Keyboard Controls
+    document.addEventListener('keydown', (e) => {
+        switch(e.key) {
+            case ' ':
+            case 'Enter':
+                e.preventDefault();
+                flipCard();
+                break;
+            case 'ArrowRight':
+                nextCard();
+                break;
+            case 'ArrowLeft':
+                prevCard();
+                break;
+            case 'Home':
+                goHome();
+                break;
+        }
+    });
+
+    // Initialisierung
+    updateCard();
+</script>
+
+</body>
+</html>
