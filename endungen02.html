@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Russisch-Trainer: Endungs-Wähler (Randomized)</title>
+    <style>
+        :root {
+            --bg: #f8f9fa;
+            --card: #ffffff;
+            --primary: #0984e3;
+            --success: #27ae60;
+            --error: #d63031;
+            --text: #2d3436;
+            --border: #dfe6e9;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 550px;
+            background: var(--card);
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.05);
+            text-align: center;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 6px;
+            background: var(--border);
+            border-radius: 3px;
+            margin-bottom: 25px;
+            overflow: hidden;
+        }
+
+        #progress-fill {
+            width: 0%;
+            height: 100%;
+            background: var(--primary);
+            transition: width 0.3s ease;
+        }
+
+        h1 { font-size: 1.4rem; color: var(--primary); margin-bottom: 10px; }
+        .instruction { color: #636e72; font-size: 0.9rem; margin-bottom: 30px; }
+
+        .sentence-display {
+            font-size: 1.8rem;
+            font-weight: 500;
+            margin-bottom: 40px;
+            line-height: 1.4;
+        }
+
+        .gap {
+            color: var(--primary);
+            border-bottom: 3px solid var(--primary);
+            padding: 0 5px;
+            min-width: 40px;
+            display: inline-block;
+        }
+
+        .gap.correct { color: var(--success); border-bottom-color: var(--success); }
+        .gap.wrong { color: var(--error); border-bottom-color: var(--error); }
+
+        .options-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        .ending-btn {
+            padding: 15px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            background: white;
+            border: 2px solid var(--primary);
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: var(--primary);
+        }
+
+        .ending-btn:hover:not(:disabled) {
+            background: var(--primary);
+            color: white;
+        }
+
+        .ending-btn:disabled {
+            opacity: 0.5;
+            cursor: default;
+        }
+
+        #feedback {
+            display: none;
+            text-align: left;
+            padding: 20px;
+            border-radius: 12px;
+            margin-top: 20px;
+            animation: fadeIn 0.4s ease;
+        }
+
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+        .fb-success { background: #e8f8f0; border-left: 5px solid var(--success); color: #1e8449; }
+        .fb-error { background: #fdf2f2; border-left: 5px solid var(--error); color: #a93226; }
+
+        .btn-next, .btn-restart {
+            margin-top: 15px;
+            padding: 15px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+        }
+
+        #result-screen { display: none; }
+
+        @media (max-width: 480px) {
+            .sentence-display { font-size: 1.4rem; }
+            .ending-btn { padding: 12px; font-size: 1.1rem; }
+            .container { padding: 20px; }
+            .options-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container" id="quiz-ui">
+    <div class="progress-bar"><div id="progress-fill"></div></div>
+    <h1>Endungs-Wähler</h1>
+    <p class="instruction">Wähle die richtige Endung.</p>
+
+    <div class="sentence-display" id="sentence-box">
+        <!-- Satz wird hier geladen -->
+    </div>
+
+    <div class="options-grid" id="options-box">
+        <!-- Buttons werden hier geladen -->
+    </div>
+
+    <div id="feedback">
+        <strong id="fb-status"></strong>
+        <p id="fb-explanation" style="margin: 8px 0 0 0; line-height: 1.5; font-size: 0.95rem;"></p>
+        <button class="btn-next" onclick="nextQuestion()">Nächste Aufgabe</button>
+    </div>
+</div>
+
+<div class="container" id="result-screen">
+    <h2>Training beendet!</h2>
+    <p id="score-text" style="font-size: 1.3rem; margin: 25px 0;"></p>
+    <button class="btn-restart" onclick="restart()">Neustart</button>
+</div>
+
+<script>
+    const questions = [
+        { stem: "Огромн", suffix: "ое", after: " спасибо!", options: ["ое", "ый", "ая"], explanation: " спасибo ist sächlich, daher muss das Adjektiv auf -ое enden." },
+        { stem: "Больш", suffix: "ое", after: " спасибо!", options: ["ое", "ой", "ая"], explanation: "Vielen Dank heißt auf Russisch большое спасибо (sächlich)." },
+        { stem: "Спасибо за книг", suffix: "у", after: ".", options: ["у", "а", "и"], explanation: "Nach за folgt der Akkusativ. Aus книга (w) wird im Akkusativ книгу." },
+        { stem: "В эт", suffix: "и", after: " выходные.", options: ["и", "ых", "ом"], explanation: "В эти выходные ist die neutrale Pluralform für an diesem Wochenende." },
+        { stem: "Ирина, вы умн", suffix: "ая", after: ".", options: ["ая", "ые", "ой"], explanation: "Anrede einer einzelnen Frau mit вы: Das Adjektiv bleibt im Singular." },
+        { stem: "Ирина, вы пришл", suffix: "и", after: ".", options: ["и", "а", "о"], explanation: "Verben stehen nach вы immer im Plural, auch bei einer einzelnen Person." },
+        { stem: "Я говорю по-russk", suffix: "и", after: ".", options: ["и", "ий", "о"], explanation: "Adverbien für Sprachen enden auf -и. По-русский wäre falsch." },
+        { stem: "Моя подруга — китаян", suffix: "ка", after: ".", options: ["ка", "ская", "цы"], explanation: "Für die Nationalität einer Frau nutzt man das Substantiv auf -ка." },
+        { stem: "Я очень сильно скуча", suffix: "ю", after: ".", options: ["ю", "ет", "ют"], explanation: "Die Ich-Endung (я) für dieses Verb ist -ю." },
+        { stem: "Если бы я бы", suffix: "ла", after: " тобой...", options: ["ла", "л", "ли"], explanation: "Da eine Frau spricht (Ira), muss das Verb in der Vergangenheit auf -ла enden." }
+    ];
+
+    let currentIdx = 0;
+    let score = 0;
+    let answered = false;
+
+    // Hilfsfunktion zum Mischen
+    function shuffleArray(array) {
+        for (let i = array.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [array[i], array[j]] = [array[j], array[i]];
+        }
+        return array;
+    }
+
+    function renderQuestion() {
+        answered = false;
+        const q = questions[currentIdx];
+        const sentenceBox = document.getElementById('sentence-box');
+        const optionsBox = document.getElementById('options-box');
+        const feedback = document.getElementById('feedback');
+
+        sentenceBox.innerHTML = `${q.stem}<span class="gap" id="gap-el">...</span>${q.after}`;
+        feedback.style.display = 'none';
+        
+        optionsBox.innerHTML = '';
+        
+        // Optionen mischen, bevor sie als Buttons erstellt werden
+        const shuffledOptions = shuffleArray([...q.options]);
+
+        shuffledOptions.forEach(opt => {
+            const btn = document.createElement('button');
+            btn.className = 'ending-btn';
+            btn.innerText = opt;
+            btn.onclick = () => checkAnswer(opt);
+            optionsBox.appendChild(btn);
+        });
+
+        updateProgress();
+    }
+
+    function checkAnswer(selected) {
+        if (answered) return;
+        answered = true;
+
+        const q = questions[currentIdx];
+        const gap = document.getElementById('gap-el');
+        const feedback = document.getElementById('feedback');
+        const fbStatus = document.getElementById('fb-status');
+        const fbExpl = document.getElementById('fb-explanation');
+        const buttons = document.querySelectorAll('.ending-btn');
+
+        buttons.forEach(btn => btn.disabled = true);
+        
+        if (selected === q.suffix) {
+            score++;
+            gap.innerText = selected;
+            gap.className = "gap correct";
+            fbStatus.innerText = "Richtig!";
+            feedback.className = "fb-success";
+        } else {
+            gap.innerHTML = `<span style="text-decoration: line-through; color: var(--error);">${selected}</span> <span style="color: var(--success);">${q.suffix}</span>`;
+            gap.className = "gap wrong";
+            fbStatus.innerText = "Leider nicht.";
+            feedback.className = "fb-error";
+        }
+
+        fbExpl.innerText = q.explanation;
+        feedback.style.display = 'block';
+    }
+
+    function nextQuestion() {
+        currentIdx++;
+        if (currentIdx < questions.length) {
+            renderQuestion();
+        } else {
+            showFinal();
+        }
+    }
+
+    function updateProgress() {
+        const percent = (currentIdx / questions.length) * 100;
+        document.getElementById('progress-fill').style.width = percent + '%';
+    }
+
+    function showFinal() {
+        document.getElementById('quiz-ui').style.display = 'none';
+        document.getElementById('result-screen').style.display = 'block';
+        document.getElementById('score-text').innerText = `Du hast ${score} von ${questions.length} Endungen korrekt gewählt!`;
+    }
+
+    function restart() {
+        currentIdx = 0;
+        score = 0;
+        document.getElementById('quiz-ui').style.display = 'block';
+        document.getElementById('result-screen').style.display = 'none';
+        renderQuestion();
+    }
+
+    // Erster Start
+    renderQuestion();
+</script>
+
+</body>
+</html>
