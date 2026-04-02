@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Russisch-Trainer: Negations-Check</title>
+    <style>
+        :root {
+            --bg: #f8f9fa;
+            --card: #ffffff;
+            --primary: #0984e3;
+            --success: #27ae60;
+            --error: #d63031;
+            --text: #2d3436;
+            --gray: #dfe6e9;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 650px;
+            background: var(--card);
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+            text-align: center;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: var(--gray);
+            border-radius: 4px;
+            margin-bottom: 25px;
+            overflow: hidden;
+        }
+
+        #progress-fill {
+            width: 0%;
+            height: 100%;
+            background: var(--primary);
+            transition: width 0.3s ease;
+        }
+
+        h1 { font-size: 1.5rem; color: var(--primary); margin: 0 0 10px 0; }
+        .instruction { color: #636e72; font-size: 0.95rem; margin-bottom: 30px; line-height: 1.4; }
+
+        /* Satzbau-Fläche */
+        .sentence-display {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            align-items: center;
+            gap: 5px;
+            margin-bottom: 40px;
+            padding: 20px;
+            background: #fdfdfd;
+            border-radius: 15px;
+            border: 1px solid #f0f0f0;
+        }
+
+        .word {
+            font-size: 1.6rem;
+            font-weight: 500;
+            padding: 5px 2px;
+        }
+
+        /* Die anklickbaren Stellen für "не" */
+        .gap-button {
+            width: 40px;
+            height: 40px;
+            background-color: var(--gray);
+            border: 2px dashed #b2bec3;
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 0.8rem;
+            color: #636e72;
+            transition: all 0.2s;
+            margin: 0 5px;
+        }
+
+        .gap-button:hover:not(:disabled) {
+            background-color: #b2bec3;
+            border-color: #636e72;
+            color: white;
+        }
+
+        .gap-button:disabled { cursor: default; }
+
+        .gap-button.correct {
+            background-color: var(--success);
+            border-color: var(--success);
+            color: white;
+            width: auto;
+            padding: 0 12px;
+            font-size: 1.4rem;
+            font-weight: bold;
+            border-style: solid;
+        }
+
+        .gap-button.wrong {
+            background-color: var(--error);
+            border-color: var(--error);
+            color: white;
+            border-style: solid;
+        }
+
+        /* Feedback */
+        #feedback {
+            display: none;
+            margin-top: 20px;
+            padding: 20px;
+            border-radius: 12px;
+            text-align: left;
+            animation: fadeIn 0.4s ease;
+        }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        .fb-success { background: #e8f8f0; border-left: 5px solid var(--success); }
+        .fb-error { background: #fdf2f2; border-left: 5px solid var(--error); }
+
+        .btn-action {
+            margin-top: 15px;
+            padding: 15px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+        }
+
+        #result-screen { display: none; }
+
+        @media (max-width: 480px) {
+            .word { font-size: 1.2rem; }
+            .gap-button { width: 30px; height: 35px; }
+            .container { padding: 20px; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container" id="quiz-ui">
+    <div class="progress-bar"><div id="progress-fill"></div></div>
+    <h1>Negations-Check</h1>
+    <p class="instruction">In diesem Satz fehlt das Wort „не“. Klicke auf das richtige Kästchen, um es an der korrekten Stelle einzufügen.</p>
+
+    <div class="sentence-display" id="sentence-container">
+        <!-- Satz wird hier dynamisch generiert -->
+    </div>
+
+    <div id="feedback">
+        <strong id="fb-status" style="font-size: 1.1rem;"></strong>
+        <p id="fb-text" style="margin: 10px 0 0 0; line-height: 1.5; font-size: 0.95rem;"></p>
+        <button class="btn-action" onclick="nextQuestion()">Nächster Satz</button>
+    </div>
+</div>
+
+<div class="container" id="result-screen">
+    <h2>Training abgeschlossen!</h2>
+    <p id="score-text" style="font-size: 1.3rem; margin: 25px 0;"></p>
+    <button class="btn-action" onclick="restart()">Erneut starten</button>
+</div>
+
+<script>
+    const questions = [
+        {
+            words: ["Я", "ничего", "знаю."],
+            correctGap: 2, // Index der Lücke (vor "знаю")
+            explanation: "Im Russischen muss bei Negationswörtern wie nichts (ничего) immer ein zusätzliches „не“ direkt vor dem Verb stehen."
+        },
+        {
+            words: ["Никто", "пришёл", "на", "урок."],
+            correctGap: 1, 
+            explanation: "Auch bei niemand (Никто) ist die doppelte Verneinung Pflicht. Das „не“ gehört vor das Verb „пришёл“."
+        },
+        {
+            words: ["Мы", "никуда", "ходили", "вчера."],
+            correctGap: 2,
+            explanation: "Bei nirgendwohin (никуда) muss das Verb verneint werden. Richtig: Мы никуда не ходили."
+        },
+        {
+            words: ["Он", "никогда", "звонит", "мне."],
+            correctGap: 2,
+            explanation: "Niemals (никогда) erfordert ebenfalls das „не“ vor dem Verb."
+        },
+        {
+            words: ["Я", "ни", "с", "кем", "разговариваю."],
+            correctGap: 4,
+            explanation: "Selbst wenn die Präposition das Wort „ни“ trennt (ни с кем), muss das Verb am Ende verneint werden."
+        },
+        {
+            words: ["Они", "нигде", "были."],
+            correctGap: 2,
+            explanation: "Nirgends (нигде) + nicht (не) + Verb. Richtig: Они нигде не были."
+        },
+        {
+            words: ["Никто", "видел", "этого", "фильма."],
+            correctGap: 1,
+            explanation: "Das „не“ steht zwingend vor dem Verb „видел“."
+        },
+        {
+            words: ["Я", "ничего", "слышал", "об", "этом."],
+            correctGap: 2,
+            explanation: "Doppelte Verneinung: nichts gehört = ничего не слышал."
+        },
+        {
+            words: ["Вы", "никуда", "едете?"],
+            correctGap: 2,
+            explanation: "Auch in Fragen bleibt die Struktur gleich: никуда + не + Verb."
+        },
+        {
+            words: ["Она", "никогда", "опаздывает."],
+            correctGap: 2,
+            explanation: "Niemals zu spät kommen = никогда не опаздывает."
+        }
+    ];
+
+    let currentIdx = 0;
+    let score = 0;
+    let answered = false;
+
+    function shuffle(array) {
+        return array.sort(() => Math.random() - 0.5);
+    }
+
+    let currentQuestions = [];
+
+    function initQuiz() {
+        currentQuestions = shuffle([...questions]);
+        currentIdx = 0;
+        score = 0;
+        loadQuestion();
+    }
+
+    function loadQuestion() {
+        answered = false;
+        const q = currentQuestions[currentIdx];
+        const container = document.getElementById('sentence-container');
+        container.innerHTML = '';
+        
+        document.getElementById('feedback').style.display = 'none';
+
+        // Gaps und Wörter generieren
+        // Es gibt immer (Anzahl Wörter + 1) mögliche Gaps
+        for (let i = 0; i <= q.words.length; i++) {
+            // Gap Button erstellen
+            const btn = document.createElement('button');
+            btn.className = 'gap-button';
+            btn.innerText = '?';
+            btn.onclick = () => checkAnswer(i, btn);
+            container.appendChild(btn);
+
+            // Wort hinzufügen (außer nach der letzten Lücke)
+            if (i < q.words.length) {
+                const wordSpan = document.createElement('span');
+                wordSpan.className = 'word';
+                wordSpan.innerText = q.words[i];
+                container.appendChild(wordSpan);
+            }
+        }
+        
+        updateProgress();
+    }
+
+    function checkAnswer(gapIdx, clickedBtn) {
+        if (answered) return;
+        answered = true;
+
+        const q = currentQuestions[currentIdx];
+        const isCorrect = (gapIdx === q.correctGap);
+        const feedback = document.getElementById('feedback');
+        const fbStatus = document.getElementById('fb-status');
+        const fbText = document.getElementById('fb-text');
+        const allBtns = document.querySelectorAll('.gap-button');
+
+        allBtns.forEach(btn => btn.disabled = true);
+
+        if (isCorrect) {
+            score++;
+            fbStatus.innerText = "Hervorragend!";
+            fbStatus.style.color = "var(--success)";
+            feedback.className = "fb-success";
+            clickedBtn.innerText = "не";
+            clickedBtn.classList.add('correct');
+        } else {
+            fbStatus.innerText = "Das ist leider falsch.";
+            fbStatus.style.color = "var(--error)";
+            feedback.className = "fb-error";
+            clickedBtn.classList.add('wrong');
+            // Richtige Stelle anzeigen
+            allBtns[q.correctGap].innerText = "не";
+            allBtns[q.correctGap].classList.add('correct');
+        }
+
+        fbText.innerText = q.explanation;
+        feedback.style.display = 'block';
+    }
+
+    function nextQuestion() {
+        currentIdx++;
+        if (currentIdx < currentQuestions.length) {
+            loadQuestion();
+        } else {
+            showFinal();
+        }
+    }
+
+    function updateProgress() {
+        const percent = (currentIdx / currentQuestions.length) * 100;
+        document.getElementById('progress-fill').style.width = percent + '%';
+    }
+
+    function showFinal() {
+        document.getElementById('quiz-ui').style.display = 'none';
+        document.getElementById('result-screen').style.display = 'block';
+        document.getElementById('score-text').innerText = `Du hast ${score} von ${currentQuestions.length} Stellen korrekt identifiziert!`;
+    }
+
+    function restart() {
+        document.getElementById('quiz-ui').style.display = 'block';
+        document.getElementById('result-screen').style.display = 'none';
+        initQuiz();
+    }
+
+    initQuiz();
+</script>
+
+</body>
+</html>
